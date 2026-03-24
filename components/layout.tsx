@@ -10,6 +10,7 @@ type Page = "dashboard" | "team" | "settings" | "progress"
 interface NavbarProps {
   activePage: Page
   onNavigate: (page: Page) => void
+  onProfileClick: () => void
   onLogout: () => void
   userName: string
   userEmail: string
@@ -19,7 +20,6 @@ const navItems: { id: Page; label: string; icon: React.ElementType }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "team", label: "Team", icon: Users },
   { id: "progress", label: "Progress", icon: BarChart2 },
-  { id: "settings", label: "Settings", icon: Settings },
 ]
 
 const bottomNavItems: { id: Page; label: string; icon: React.ElementType }[] = [
@@ -87,7 +87,7 @@ function ThemeToggle() {
   )
 }
 
-export function Sidebar({ activePage, onNavigate, onLogout, userName, userEmail }: NavbarProps) {
+export function Sidebar({ activePage, onNavigate, onProfileClick, onLogout, userName, userEmail }: NavbarProps) {
   return (
     <aside className="w-56 h-screen bg-sidebar border-r border-sidebar-border flex flex-col shrink-0 overflow-hidden">
       <div className="flex items-center gap-2.5 px-5 h-16 border-b border-sidebar-border">
@@ -115,7 +115,11 @@ export function Sidebar({ activePage, onNavigate, onLogout, userName, userEmail 
       </nav>
 
       <div className="px-3 pb-4 flex flex-col gap-1">
-        <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl">
+        <button
+          onClick={onProfileClick}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-sidebar-accent transition-colors text-left"
+          aria-label="Open settings"
+        >
           <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-xs font-semibold text-primary">
             {userName.slice(0, 1).toUpperCase()}
           </div>
@@ -123,7 +127,7 @@ export function Sidebar({ activePage, onNavigate, onLogout, userName, userEmail 
             <p className="text-xs font-medium text-sidebar-foreground truncate">{userName}</p>
             <p className="text-[10px] text-muted-foreground truncate">{userEmail}</p>
           </div>
-        </div>
+        </button>
         <button
           onClick={onLogout}
           className="flex items-center gap-3 w-full px-3 py-2 rounded-xl text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-150"

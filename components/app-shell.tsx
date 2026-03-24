@@ -231,6 +231,7 @@ export function AppShell() {
         <Sidebar
           activePage={activePage}
           onNavigate={handleNavigate}
+          onProfileClick={() => handleNavigate("settings")}
           onLogout={() => void handleLogout()}
           userName={userDisplayName}
           userEmail={userEmail}
@@ -273,7 +274,15 @@ export function AppShell() {
             />
           )}
           {activePage === "progress" && <ProgressPage topics={topics} />}
-          {activePage === "settings" && <SettingsPage userName={userDisplayName} userEmail={userEmail} />}
+          {activePage === "settings" && (
+            <SettingsPage
+              userId={user.id}
+              userName={userDisplayName}
+              userEmail={userEmail}
+              refreshAll={refreshAll}
+              showNotification={showNotification}
+            />
+          )}
         </main>
 
         <BottomNav activePage={activePage} onNavigate={handleNavigate} />

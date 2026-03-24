@@ -381,6 +381,31 @@ export async function updatePassword(newPassword: string) {
   if (error) throw error
 }
 
+export async function updateProfileName(params: { userId: string; fullName: string }) {
+  assertSupabaseConfigured()
+  const trimmedName = params.fullName.trim()
+  if (!trimmedName) throw new Error("Name cannot be empty")
+
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .update({ full_name: trimmedName })
+    .eq("user_id", params.userId)
+
+  if (profileError) throw profileError
+
+  const { error: authError } = await supabase.auth.updateUser({
+    data: { full_name: trimmedName },
+  })
+
+  if (authError) throw authError
+}
+
+export async function clearAllUserTasks(userId: string) {
+  assertSupabaseConfigured()
+  const { error } = await supabase.from("tasks").delete().eq("user_id", userId)
+  if (error) throw error
+}
+
 export async function getCurrentUser() {
   assertSupabaseConfigured()
   const { data, error } = await supabase.auth.getUser()
