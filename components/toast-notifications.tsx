@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { X, Bell } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -66,14 +66,14 @@ export function ToastContainer({ toasts, onDismiss }: ToastContainerProps) {
 export function useToasts() {
   const [toasts, setToasts] = useState<ToastMessage[]>([])
 
-  const showNotification = (message: string) => {
+  const showNotification = useCallback((message: string) => {
     const id = `toast-${Date.now()}`
     setToasts((prev) => [...prev, { id, message, timestamp: new Date() }])
-  }
+  }, [])
 
-  const dismissToast = (id: string) => {
+  const dismissToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id))
-  }
+  }, [])
 
   return { toasts, showNotification, dismissToast }
 }

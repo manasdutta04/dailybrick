@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { User } from "@supabase/supabase-js"
 import { AuthPage } from "@/components/auth-page"
 import { Sidebar, Topbar, BottomNav } from "@/components/layout"
@@ -47,6 +47,7 @@ export default function Home() {
     teamRank: "-",
   })
   const { toasts, showNotification, dismissToast } = useToasts()
+  const lastLoadErrorRef = useRef<string | null>(null)
 
   const userDisplayName = useMemo(() => {
     if (profile?.fullName) return profile.fullName
@@ -69,9 +70,18 @@ export default function Home() {
       setTeamMembers(snapshot.teamMembers)
       setTopics(snapshot.topics)
       setQuickStats(snapshot.quickStats)
+      lastLoadErrorRef.current = null
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Could not load app data"
-      showNotification(message)
+      const originalMessage = err instanceof Error ? err.message : "Could not load app data"
+      const mappedMessage =
+        /404|relation|profiles|tasks|not found/i.test(originalMessage)
+          ? "Supabase tables are missing. Run supabase/schema.sql in Supabase SQL Editor."
+          : originalMessage
+
+      if (lastLoadErrorRef.current !== mappedMessage) {
+        showNotification(mappedMessage)
+        lastLoadErrorRef.current = mappedMessage
+      }
     } finally {
       setIsLoadingData(false)
     }
