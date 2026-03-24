@@ -1,6 +1,6 @@
 "use client"
 
-import { Box, LayoutDashboard, Users, Settings, ChevronDown, Bell, LogOut, Sun, Moon, Monitor } from "lucide-react"
+import { Box, LayoutDashboard, Users, Settings, ChevronDown, Bell, LogOut, Sun, Moon, Monitor, BarChart2 } from "lucide-react"
 import { useState, useRef, useEffect } from "react"
 import { useTheme } from "next-themes"
 import { cn } from "@/lib/utils"
@@ -16,6 +16,13 @@ interface NavbarProps {
 const navItems: { id: Page; label: string; icon: React.ElementType }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "team", label: "Team", icon: Users },
+  { id: "settings", label: "Settings", icon: Settings },
+]
+
+const bottomNavItems: { id: Page; label: string; icon: React.ElementType }[] = [
+  { id: "dashboard", label: "Home", icon: LayoutDashboard },
+  { id: "team", label: "Team", icon: Users },
+  { id: "progress", label: "Progress", icon: BarChart2 },
   { id: "settings", label: "Settings", icon: Settings },
 ]
 
@@ -47,12 +54,12 @@ function ThemeToggle() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 h-8 px-3 rounded-xl bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors text-xs font-medium"
+        className="flex items-center gap-1.5 h-8 px-2.5 rounded-xl bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors text-xs font-medium"
         aria-label="Toggle theme"
       >
         <CurrentIcon className="w-3.5 h-3.5" />
         <span className="hidden sm:inline">{current.label}</span>
-        <ChevronDown className="w-3 h-3" />
+        <ChevronDown className="w-3 h-3 hidden sm:block" />
       </button>
 
       {open && (
@@ -80,7 +87,6 @@ function ThemeToggle() {
 export function Sidebar({ activePage, onNavigate, onLogout }: NavbarProps) {
   return (
     <aside className="w-56 h-screen bg-sidebar border-r border-sidebar-border flex flex-col shrink-0 overflow-hidden">
-      {/* Logo */}
       <div className="flex items-center gap-2.5 px-5 h-16 border-b border-sidebar-border">
         <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
           <Box className="w-4 h-4 text-primary-foreground" />
@@ -88,7 +94,6 @@ export function Sidebar({ activePage, onNavigate, onLogout }: NavbarProps) {
         <span className="font-semibold text-sm tracking-tight text-sidebar-foreground">DailyBrick</span>
       </div>
 
-      {/* Nav */}
       <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
         {navItems.map(({ id, label, icon: Icon }) => (
           <button
@@ -106,7 +111,6 @@ export function Sidebar({ activePage, onNavigate, onLogout }: NavbarProps) {
         ))}
       </nav>
 
-      {/* User */}
       <div className="px-3 pb-4 flex flex-col gap-1">
         <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl">
           <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-xs font-semibold text-primary">
@@ -135,28 +139,20 @@ interface TopbarProps {
 }
 
 export function Topbar({ title, onNotificationClick }: TopbarProps) {
-  const [teamOpen, setTeamOpen] = useState(false)
-
   return (
-    <header className="h-16 border-b border-border bg-background/80 backdrop-blur-sm flex items-center justify-between px-6 shrink-0 sticky top-0 z-10">
-      <h1 className="text-base font-semibold text-foreground">{title}</h1>
-      <div className="flex items-center gap-3">
-        {/* Team switcher */}
-        <button
-          onClick={() => setTeamOpen(!teamOpen)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-secondary text-sm text-foreground hover:bg-secondary/80 transition-colors"
-        >
-          <div className="w-4 h-4 rounded-sm bg-primary/30 flex items-center justify-center">
-            <Users className="w-2.5 h-2.5 text-primary" />
+    <header className="h-14 md:h-16 border-b border-border bg-background/80 backdrop-blur-sm flex items-center justify-between px-4 md:px-6 shrink-0 sticky top-0 z-10">
+      <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2 md:hidden">
+          <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
+            <Box className="w-3.5 h-3.5 text-primary-foreground" />
           </div>
-          <span className="text-xs font-medium">Team Alpha</span>
-          <ChevronDown className="w-3 h-3 text-muted-foreground" />
-        </button>
+          <span className="font-semibold text-sm text-foreground">DailyBrick</span>
+        </div>
+        <h1 className="hidden md:block text-base font-semibold text-foreground">{title}</h1>
+      </div>
 
-        {/* Theme toggle */}
+      <div className="flex items-center gap-2">
         <ThemeToggle />
-
-        {/* Notification bell */}
         <button
           onClick={onNotificationClick}
           className="relative w-8 h-8 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
@@ -165,12 +161,35 @@ export function Topbar({ title, onNotificationClick }: TopbarProps) {
           <Bell className="w-4 h-4" />
           <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-primary" />
         </button>
-
-        {/* Avatar */}
         <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-semibold text-primary cursor-pointer">
           AJ
         </div>
       </div>
     </header>
+  )
+}
+
+interface BottomNavProps {
+  activePage: Page
+  onNavigate: (page: Page) => void
+}
+
+export function BottomNav({ activePage, onNavigate }: BottomNavProps) {
+  return (
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-background/95 backdrop-blur-md border-t border-border flex items-center justify-around px-2 z-20">
+      {bottomNavItems.map(({ id, label, icon: Icon }) => (
+        <button
+          key={id}
+          onClick={() => onNavigate(id)}
+          className={cn(
+            "flex flex-col items-center gap-1 flex-1 py-2 rounded-xl transition-all duration-150",
+            activePage === id ? "text-primary" : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <Icon className="w-5 h-5" />
+          <span className="text-[10px] font-medium">{label}</span>
+        </button>
+      ))}
+    </nav>
   )
 }
