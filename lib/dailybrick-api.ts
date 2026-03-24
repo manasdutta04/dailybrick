@@ -626,7 +626,7 @@ export async function deleteTeam(params: { teamId: string; ownerId: string }) {
   if (error) throw error
 }
 
-export async function inviteTeamMember(params: { teamId: string; email: string }) {
+export async function inviteTeamMember(params: { teamId: string; email: string; redirectTo?: string }) {
   assertSupabaseConfigured()
   const normalizedEmail = params.email.trim().toLowerCase()
   if (!normalizedEmail) throw new Error("Email is required")
@@ -664,6 +664,28 @@ export async function inviteTeamMember(params: { teamId: string; email: string }
   })
 
   if (error) throw error
+
+  let emailSent = false
+  let emailError: string | null = null
+
+  const { error: otpError } = await supabase.auth.signInWithOtp({
+    email: normalizedEmail,
+    options: {
+      shouldCreateUser: true,
+      emailRedirectTo: params.redirectTo,
+      data: {
+        invited_team_id: params.teamId,
+      },
+    },
+  })
+
+  if (otpError) {
+    emailError = otpError.message
+  } else {
+    emailSent = true
+  }
+
+  return { emailSent, emailError }
 }
 
 export async function markDueRemindersAsSent(taskIds: string[]) {

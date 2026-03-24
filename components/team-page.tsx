@@ -85,9 +85,17 @@ export function TeamPage({ user, teamId, teamCode, teamOwnerId, teamMembers, ref
 
     try {
       setBusy(true)
-      await inviteTeamMember({ teamId, email: inviteEmail })
+      const result = await inviteTeamMember({
+        teamId,
+        email: inviteEmail,
+        redirectTo: window.location.origin,
+      })
       setInviteSent(true)
-      showNotification(`Invite sent to ${inviteEmail.trim().toLowerCase()}`)
+      if (result.emailSent) {
+        showNotification(`Invite email sent to ${inviteEmail.trim().toLowerCase()}`)
+      } else {
+        showNotification("Invite saved, but email could not be sent. Ask teammate to join using code.")
+      }
       await refreshAll()
       setTimeout(() => {
         setInviteSent(false)
@@ -290,7 +298,7 @@ export function TeamPage({ user, teamId, teamCode, teamOwnerId, teamMembers, ref
               {inviteSent ? "Sent!" : "Invite"}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">Team is limited to 2 members. Invitation will be sent via email.</p>
+          <p className="text-xs text-muted-foreground">Team is limited to 2 members. DailyBrick stores the invite and also tries to send an email link.</p>
         </div>
       </div>
 
