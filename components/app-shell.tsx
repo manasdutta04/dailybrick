@@ -241,7 +241,7 @@ export function AppShell() {
         <Topbar
           title={pageTitles[activePage]}
           onNotificationClick={handleNotificationClick}
-          onLogout={() => void handleLogout()}
+          onProfileClick={() => handleNavigate("settings")}
           userName={userDisplayName}
         />
 

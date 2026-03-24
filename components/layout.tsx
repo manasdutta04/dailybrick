@@ -139,11 +139,11 @@ export function Sidebar({ activePage, onNavigate, onLogout, userName, userEmail 
 interface TopbarProps {
   title: string
   onNotificationClick: () => void
-  onLogout: () => void
+  onProfileClick: () => void
   userName: string
 }
 
-export function Topbar({ title, onNotificationClick, onLogout, userName }: TopbarProps) {
+export function Topbar({ title, onNotificationClick, onProfileClick, userName }: TopbarProps) {
   return (
     <header className="h-14 md:h-16 border-b border-border bg-background/80 backdrop-blur-sm flex items-center justify-between px-4 md:px-6 shrink-0 sticky top-0 z-10">
       <div className="flex items-center gap-2.5">
@@ -167,9 +167,9 @@ export function Topbar({ title, onNotificationClick, onLogout, userName }: Topba
           <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-primary" />
         </button>
         <button
-          onClick={onLogout}
+          onClick={onProfileClick}
           className="hidden md:flex w-8 h-8 rounded-full bg-primary/20 items-center justify-center text-xs font-semibold text-primary"
-          aria-label="Sign out"
+          aria-label="Open settings"
         >
           {userName.slice(0, 1).toUpperCase()}
         </button>
