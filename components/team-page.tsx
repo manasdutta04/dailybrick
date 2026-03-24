@@ -2,7 +2,9 @@
 
 import { useState } from "react"
 import { Copy, Check, UserPlus, Users, Mail, Lock } from "lucide-react"
-import { mockTeamMembers, TEAM_CODE, Task } from "@/lib/mock-data"
+import { createTeam, inviteTeamMember } from "@/lib/dailybrick-api"
+import type { Task, TeamMember } from "@/lib/types"
+import type { User } from "@supabase/supabase-js"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
@@ -32,29 +34,89 @@ function TaskRowReadOnly({ task }: { task: Task }) {
   )
 }
 
-export function TeamPage() {
+interface TeamPageProps {
+  user: User
+  teamId: string | null
+  teamCode: string | null
+  teamMembers: TeamMember[]
+  refreshAll: () => Promise<void>
+  showNotification: (msg: string) => void
+}
+
+export function TeamPage({ user, teamId, teamCode, teamMembers, refreshAll, showNotification }: TeamPageProps) {
   const [copied, setCopied] = useState(false)
   const [inviteEmail, setInviteEmail] = useState("")
   const [inviteSent, setInviteSent] = useState(false)
   const [expandedMember, setExpandedMember] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
 
   const copyCode = () => {
-    navigator.clipboard.writeText(TEAM_CODE)
+    if (!teamCode) return
+    navigator.clipboard.writeText(teamCode)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const sendInvite = () => {
+  const handleCreateTeam = async () => {
+    if (teamId) return
+    try {
+      setBusy(true)
+      await createTeam(user)
+      await refreshAll()
+      showNotification("Team created successfully.")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not create team"
+      showNotification(message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const sendInvite = async () => {
     if (!inviteEmail.trim()) return
-    setInviteSent(true)
-    setTimeout(() => {
-      setInviteSent(false)
-      setInviteEmail("")
-    }, 2000)
+    if (!teamId) {
+      showNotification("Create your team first, then invite a member.")
+      return
+    }
+
+    try {
+      setBusy(true)
+      await inviteTeamMember({ teamId, email: inviteEmail })
+      setInviteSent(true)
+      showNotification(`Invite sent to ${inviteEmail.trim().toLowerCase()}`)
+      await refreshAll()
+      setTimeout(() => {
+        setInviteSent(false)
+        setInviteEmail("")
+      }, 1200)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not invite member"
+      showNotification(message)
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
     <div className="flex flex-col gap-6">
+      {!teamId && (
+        <div className="bg-card border border-border rounded-2xl p-5 flex items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Create your team</h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              DailyBrick supports 2 members per team. Create your team to invite one member.
+            </p>
+          </div>
+          <Button
+            onClick={() => void handleCreateTeam()}
+            disabled={busy}
+            className="h-10 px-4 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            {busy ? "Creating..." : "Create Team"}
+          </Button>
+        </div>
+      )}
+
       {/* Team info row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Team code card */}
@@ -65,16 +127,18 @@ export function TeamPage() {
           </div>
           <div className="flex items-center gap-3">
             <div className="flex-1 px-4 py-2.5 rounded-xl bg-secondary font-mono text-sm tracking-widest text-foreground border border-border">
-              {TEAM_CODE}
+              {teamCode ?? "Not created yet"}
             </div>
             <button
               onClick={copyCode}
+              disabled={!teamCode}
               aria-label="Copy team code"
               className={cn(
                 "h-10 px-3 rounded-xl flex items-center gap-2 text-sm font-medium transition-all duration-150",
                 copied
                   ? "bg-primary/20 text-primary"
-                  : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
+                  : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80",
+                !teamCode && "opacity-50 cursor-not-allowed"
               )}
             >
               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
@@ -97,12 +161,13 @@ export function TeamPage() {
                 placeholder="teammate@example.com"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && sendInvite()}
+                onKeyDown={(e) => e.key === "Enter" && void sendInvite()}
                 className="pl-8 h-10 bg-secondary border-border text-foreground placeholder:text-muted-foreground rounded-xl text-sm"
               />
             </div>
             <Button
-              onClick={sendInvite}
+              onClick={() => void sendInvite()}
+              disabled={busy || !teamId}
               className={cn(
                 "h-10 px-4 rounded-xl text-sm font-medium transition-all",
                 inviteSent ? "bg-primary/20 text-primary" : "bg-primary text-primary-foreground hover:bg-primary/90"
@@ -120,11 +185,16 @@ export function TeamPage() {
         <div className="px-5 py-3.5 border-b border-border flex items-center gap-2">
           <Users className="w-4 h-4 text-primary" />
           <h3 className="text-sm font-semibold text-foreground">Team Members</h3>
-          <span className="ml-auto text-xs text-muted-foreground">{mockTeamMembers.length}/2</span>
+          <span className="ml-auto text-xs text-muted-foreground">{teamMembers.length}/2</span>
         </div>
 
         <div className="divide-y divide-border">
-          {mockTeamMembers.map((member) => (
+          {teamMembers.length === 0 && (
+            <div className="px-5 py-8 text-center text-sm text-muted-foreground">
+              No team members yet.
+            </div>
+          )}
+          {teamMembers.map((member) => (
             <div key={member.id}>
               {/* Member row */}
               <button

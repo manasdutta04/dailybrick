@@ -1,35 +1,75 @@
-# dailybrick
+# DailyBrick
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [v0](https://v0.app).
+DailyBrick is a daily task tracker with Supabase auth, team collaboration (max 2 members), topic progress tracking, and scheduled task reminders.
 
-## Built with v0
+## Features
 
-This repository is linked to a [v0](https://v0.app) project. You can continue developing by visiting the link below -- start new chats to make changes, and v0 will push commits directly to this repo. Every merge to `main` will automatically deploy.
+- Email/password auth via Supabase.
+- Daily tasks: add, complete/uncomplete, delete.
+- Auto carry-forward: unfinished tasks from previous days are moved to today.
+- Team mode:
+	- Create team.
+	- Invite one member by email.
+	- Unique 10-character team code.
+	- View teammate tasks and progress.
+	- Members cannot modify each other's tasks.
+- Topic progress percentages (e.g. 20%, 80%).
+- Toast reminders for scheduled task time.
 
-[Continue working on v0 →](https://v0.app/chat/projects/prj_4tbjQS2tvplQu0UCFzdTVN4EkkyZ)
+## Tech Stack
 
-## Getting Started
+- Next.js 16
+- React 19
+- TypeScript
+- Tailwind CSS
+- Supabase (Auth + Postgres)
 
-First, run the development server:
+## Local Setup
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Create local env file from example:
+
+```bash
+cp .env.example .env.local
+```
+
+3. Fill in `.env.local`:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+```
+
+4. In Supabase SQL editor, run:
+
+`supabase/schema.sql`
+
+This creates all tables, triggers, RLS policies, and helper functions.
+
+5. Run dev server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+6. Open [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deploy to Vercel
 
-## Learn More
+1. Import repo in Vercel.
+2. Add the same env vars (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`) in Vercel Project Settings.
+3. Deploy.
 
-To learn more, take a look at the following resources:
+## Important Files
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-- [v0 Documentation](https://v0.app/docs) - learn about v0 and how to use it.
-
-<a href="https://v0.app/chat/api/kiro/clone/dyn0x/dailybrick" alt="Open in Kiro"><img src="https://pdgvvgmkdvyeydso.public.blob.vercel-storage.com/open%20in%20kiro.svg?sanitize=true" /></a>
+- `app/page.tsx`: app shell + auth session + snapshot loading + reminder polling.
+- `lib/dailybrick-api.ts`: Supabase operations and business logic.
+- `lib/supabase.ts`: Supabase client initialization.
+- `lib/types.ts`: shared domain types.
+- `supabase/schema.sql`: database schema + RLS.
+- `CLAUDE.md`: agent guidance for future changes.

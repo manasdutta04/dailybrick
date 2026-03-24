@@ -11,6 +11,8 @@ interface NavbarProps {
   activePage: Page
   onNavigate: (page: Page) => void
   onLogout: () => void
+  userName: string
+  userEmail: string
 }
 
 const navItems: { id: Page; label: string; icon: React.ElementType }[] = [
@@ -84,7 +86,7 @@ function ThemeToggle() {
   )
 }
 
-export function Sidebar({ activePage, onNavigate, onLogout }: NavbarProps) {
+export function Sidebar({ activePage, onNavigate, onLogout, userName, userEmail }: NavbarProps) {
   return (
     <aside className="w-56 h-screen bg-sidebar border-r border-sidebar-border flex flex-col shrink-0 overflow-hidden">
       <div className="flex items-center gap-2.5 px-5 h-16 border-b border-sidebar-border">
@@ -114,11 +116,11 @@ export function Sidebar({ activePage, onNavigate, onLogout }: NavbarProps) {
       <div className="px-3 pb-4 flex flex-col gap-1">
         <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl">
           <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-xs font-semibold text-primary">
-            AJ
+            {userName.slice(0, 1).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-sidebar-foreground truncate">Alex Johnson</p>
-            <p className="text-[10px] text-muted-foreground truncate">alex@example.com</p>
+            <p className="text-xs font-medium text-sidebar-foreground truncate">{userName}</p>
+            <p className="text-[10px] text-muted-foreground truncate">{userEmail}</p>
           </div>
         </div>
         <button
@@ -136,9 +138,11 @@ export function Sidebar({ activePage, onNavigate, onLogout }: NavbarProps) {
 interface TopbarProps {
   title: string
   onNotificationClick: () => void
+  onLogout: () => void
+  userName: string
 }
 
-export function Topbar({ title, onNotificationClick }: TopbarProps) {
+export function Topbar({ title, onNotificationClick, onLogout, userName }: TopbarProps) {
   return (
     <header className="h-14 md:h-16 border-b border-border bg-background/80 backdrop-blur-sm flex items-center justify-between px-4 md:px-6 shrink-0 sticky top-0 z-10">
       <div className="flex items-center gap-2.5">
@@ -161,9 +165,13 @@ export function Topbar({ title, onNotificationClick }: TopbarProps) {
           <Bell className="w-4 h-4" />
           <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-primary" />
         </button>
-        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-semibold text-primary cursor-pointer">
-          AJ
-        </div>
+        <button
+          onClick={onLogout}
+          className="hidden md:flex w-8 h-8 rounded-full bg-primary/20 items-center justify-center text-xs font-semibold text-primary"
+          aria-label="Sign out"
+        >
+          {userName.slice(0, 1).toUpperCase()}
+        </button>
       </div>
     </header>
   )

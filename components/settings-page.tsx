@@ -3,7 +3,12 @@
 import { Settings, Bell, Moon, Globe, Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-export function SettingsPage() {
+interface SettingsPageProps {
+  userName: string
+  userEmail: string
+}
+
+export function SettingsPage({ userName, userEmail }: SettingsPageProps) {
   return (
     <div className="flex flex-col gap-6 max-w-2xl">
       {/* Profile */}
@@ -14,11 +19,11 @@ export function SettingsPage() {
         </div>
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-primary/20 flex items-center justify-center text-lg font-bold text-primary">
-            AJ
+            {userName.slice(0, 1).toUpperCase()}
           </div>
           <div className="flex-1 flex flex-col gap-1">
-            <p className="text-sm font-semibold text-foreground">Alex Johnson</p>
-            <p className="text-xs text-muted-foreground">alex@example.com</p>
+            <p className="text-sm font-semibold text-foreground">{userName}</p>
+            <p className="text-xs text-muted-foreground">{userEmail}</p>
           </div>
           <Button variant="outline" className="h-8 px-4 rounded-xl text-xs border-border text-foreground hover:bg-secondary">
             Edit

@@ -1,31 +1,48 @@
 "use client"
 
-import { useState } from "react"
 import { CalendarClock, CheckSquare, BarChart3, Users2 } from "lucide-react"
 import { OverviewCards } from "@/components/overview-cards"
 import { TasksSection } from "@/components/tasks-section"
-import { mockTasks, Task } from "@/lib/mock-data"
+import type { DashboardQuickStats, Task } from "@/lib/types"
 
 interface DashboardPageProps {
+  userName: string
   tasks: Task[]
+  carriedTasks: Task[]
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>
+  setCarriedTasks: React.Dispatch<React.SetStateAction<Task[]>>
+  teamId: string | null
+  userId: string
+  quickStats: DashboardQuickStats
+  refreshAll: () => Promise<void>
   showNotification: (msg: string) => void
 }
 
-const quickStats = [
-  { label: "Streak", value: "7 days", icon: CalendarClock },
-  { label: "Done this week", value: "24 tasks", icon: CheckSquare },
-  { label: "Top topic", value: "DSA", icon: BarChart3 },
-  { label: "Team rank", value: "#1", icon: Users2 },
-]
+export function DashboardPage({
+  userName,
+  tasks,
+  carriedTasks,
+  setTasks,
+  setCarriedTasks,
+  teamId,
+  userId,
+  quickStats,
+  refreshAll,
+  showNotification,
+}: DashboardPageProps) {
+  const stats = [
+    { label: "Streak", value: quickStats.streak, icon: CalendarClock },
+    { label: "Done this week", value: quickStats.doneThisWeek, icon: CheckSquare },
+    { label: "Top topic", value: quickStats.topTopic, icon: BarChart3 },
+    { label: "Team rank", value: quickStats.teamRank, icon: Users2 },
+  ]
 
-export function DashboardPage({ tasks, setTasks, showNotification }: DashboardPageProps) {
   return (
     <div className="flex flex-col gap-6">
       {/* Date greeting */}
       <div>
         <h2 className="text-lg font-semibold text-foreground text-balance">
-          Good morning, Alex
+          Good morning, {userName.split(" ")[0]}
         </h2>
         <p className="text-sm text-muted-foreground mt-1">
           {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
@@ -34,7 +51,7 @@ export function DashboardPage({ tasks, setTasks, showNotification }: DashboardPa
 
       {/* Quick stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {quickStats.map(({ label, value, icon: Icon }) => (
+        {stats.map(({ label, value, icon: Icon }) => (
           <div key={label} className="flex items-center gap-3 bg-secondary/50 border border-border rounded-xl px-4 py-3">
             <Icon className="w-4 h-4 text-primary shrink-0" />
             <div>
@@ -49,7 +66,16 @@ export function DashboardPage({ tasks, setTasks, showNotification }: DashboardPa
       <OverviewCards tasks={tasks} />
 
       {/* Tasks */}
-      <TasksSection tasks={tasks} setTasks={setTasks} showNotification={showNotification} />
+      <TasksSection
+        userId={userId}
+        teamId={teamId}
+        tasks={tasks}
+        carriedTasks={carriedTasks}
+        setTasks={setTasks}
+        setCarriedTasks={setCarriedTasks}
+        refreshAll={refreshAll}
+        showNotification={showNotification}
+      />
     </div>
   )
 }

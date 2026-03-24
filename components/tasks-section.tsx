@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect } from "react"
 import { Check, Trash2, Clock, ArrowUpFromLine, Plus, CalendarClock, ChevronDown, Tag } from "lucide-react"
 import { createPortal } from "react-dom"
-import { Task, mockCarriedForwardTasks } from "@/lib/mock-data"
+import { createTask, deleteTask, toggleTaskStatus } from "@/lib/dailybrick-api"
+import type { Task } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
@@ -97,19 +98,33 @@ function TaskRow({ task, onToggle, onDelete, disabled }: TaskRowProps) {
 }
 
 interface TasksSectionProps {
+  userId: string
+  teamId: string | null
   tasks: Task[]
+  carriedTasks: Task[]
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>
+  setCarriedTasks: React.Dispatch<React.SetStateAction<Task[]>>
+  refreshAll: () => Promise<void>
   showNotification?: (msg: string) => void
 }
 
-export function TasksSection({ tasks, setTasks, showNotification }: TasksSectionProps) {
+export function TasksSection({
+  userId,
+  teamId,
+  tasks,
+  carriedTasks,
+  setTasks,
+  setCarriedTasks,
+  refreshAll,
+  showNotification,
+}: TasksSectionProps) {
   const [newTitle, setNewTitle] = useState("")
   const [newTime, setNewTime] = useState("09:00")
   const [newTopic, setNewTopic] = useState("")
   const [customTopic, setCustomTopic] = useState("")
   const [showTopicDropdown, setShowTopicDropdown] = useState(false)
   const [showCustomInput, setShowCustomInput] = useState(false)
-  const [carriedTasks, setCarriedTasks] = useState<Task[]>(mockCarriedForwardTasks)
+  const [saving, setSaving] = useState(false)
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 })
   const triggerRef = useRef<HTMLButtonElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -141,25 +156,40 @@ export function TasksSection({ tasks, setTasks, showNotification }: TasksSection
     setShowTopicDropdown((prev) => !prev)
   }
 
-  const toggleTask = (id: string) => {
-    setTasks((prev) =>
-      prev.map((t) =>
-        t.id === id ? { ...t, status: t.status === "completed" ? "pending" : "completed" } : t
-      )
-    )
+  const toggleTask = async (task: Task, carried: boolean) => {
+    try {
+      setSaving(true)
+      const updated = await toggleTaskStatus(task.id, task.status)
+      if (carried) {
+        setCarriedTasks((prev) => prev.map((t) => (t.id === task.id ? updated : t)))
+      } else {
+        setTasks((prev) => prev.map((t) => (t.id === task.id ? updated : t)))
+      }
+      await refreshAll()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not update task"
+      showNotification?.(message)
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const deleteTask = (id: string) => setTasks((prev) => prev.filter((t) => t.id !== id))
-
-  const deleteCarriedTask = (id: string) =>
-    setCarriedTasks((prev) => prev.filter((t) => t.id !== id))
-
-  const toggleCarried = (id: string) => {
-    setCarriedTasks((prev) =>
-      prev.map((t) =>
-        t.id === id ? { ...t, status: t.status === "completed" ? "pending" : "completed" } : t
-      )
-    )
+  const handleDeleteTask = async (id: string, carried: boolean) => {
+    try {
+      setSaving(true)
+      await deleteTask(id)
+      if (carried) {
+        setCarriedTasks((prev) => prev.filter((t) => t.id !== id))
+      } else {
+        setTasks((prev) => prev.filter((t) => t.id !== id))
+      }
+      await refreshAll()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not delete task"
+      showNotification?.(message)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const selectTopic = (topic: string) => {
@@ -182,26 +212,29 @@ export function TasksSection({ tasks, setTasks, showNotification }: TasksSection
     }
   }
 
-  const addTask = () => {
+  const addTask = async () => {
     if (!newTitle.trim()) return
-    const timeLabel = newTime
-      ? new Date(`2000-01-01T${newTime}`).toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-        })
-      : "Any time"
-    const task: Task = {
-      id: `task-${Date.now()}`,
-      title: newTitle.trim(),
-      time: timeLabel,
-      status: "pending",
-      topic: newTopic || undefined,
+    try {
+      setSaving(true)
+      const task = await createTask({
+        userId,
+        teamId,
+        title: newTitle.trim(),
+        topic: newTopic || undefined,
+        reminderTime: newTime,
+      })
+      setTasks((prev) => [...prev, task])
+      await refreshAll()
+      showNotification?.(`Task '${task.title}' scheduled at ${task.time}`)
+      setNewTitle("")
+      setNewTime("09:00")
+      setNewTopic("")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not create task"
+      showNotification?.(message)
+    } finally {
+      setSaving(false)
     }
-    setTasks((prev) => [...prev, task])
-    showNotification?.(`Task '${task.title}' scheduled at ${task.time}`)
-    setNewTitle("")
-    setNewTime("09:00")
-    setNewTopic("")
   }
 
   return (
@@ -221,8 +254,9 @@ export function TasksSection({ tasks, setTasks, showNotification }: TasksSection
               <TaskRow
                 key={task.id}
                 task={task}
-                onToggle={toggleCarried}
-                onDelete={deleteCarriedTask}
+                onToggle={() => void toggleTask(task, true)}
+                onDelete={() => void handleDeleteTask(task.id, true)}
+                disabled={saving}
               />
             ))}
           </div>
@@ -253,8 +287,9 @@ export function TasksSection({ tasks, setTasks, showNotification }: TasksSection
               <TaskRow
                 key={task.id}
                 task={task}
-                onToggle={toggleTask}
-                onDelete={deleteTask}
+                onToggle={() => void toggleTask(task, false)}
+                onDelete={() => void handleDeleteTask(task.id, false)}
+                disabled={saving}
               />
             ))
           )}
@@ -269,7 +304,7 @@ export function TasksSection({ tasks, setTasks, showNotification }: TasksSection
                 placeholder="Add a new task..."
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addTask()}
+                onKeyDown={(e) => e.key === "Enter" && void addTask()}
                 className="h-9 w-full bg-secondary border-border text-foreground placeholder:text-muted-foreground rounded-xl text-sm"
               />
             </div>
@@ -284,7 +319,7 @@ export function TasksSection({ tasks, setTasks, showNotification }: TasksSection
                       placeholder="Topic..."
                       value={customTopic}
                       onChange={(e) => setCustomTopic(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && confirmCustomTopic()}
+                      onKeyDown={(e) => e.key === "Enter" && void confirmCustomTopic()}
                       className="h-9 w-full bg-secondary border-border text-foreground placeholder:text-muted-foreground rounded-xl text-sm"
                       autoFocus
                     />
@@ -329,7 +364,8 @@ export function TasksSection({ tasks, setTasks, showNotification }: TasksSection
               {/* Add */}
               <div className="flex-1">
                 <Button
-                  onClick={addTask}
+                  onClick={() => void addTask()}
+                  disabled={saving}
                   className="h-9 w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl"
                   aria-label="Add task"
                 >

@@ -1,7 +1,7 @@
 "use client"
 
-import { mockTopics } from "@/lib/mock-data"
 import { BarChart3 } from "lucide-react"
+import type { TopicProgress } from "@/lib/types"
 
 const colorClasses = [
   { bar: "bg-primary", text: "text-primary" },
@@ -11,7 +11,11 @@ const colorClasses = [
   { bar: "bg-chart-5", text: "text-chart-5" },
 ]
 
-export function ProgressPage() {
+interface ProgressPageProps {
+  topics: TopicProgress[]
+}
+
+export function ProgressPage({ topics }: ProgressPageProps) {
   return (
     <div className="flex flex-col gap-6">
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
@@ -20,7 +24,8 @@ export function ProgressPage() {
           <h3 className="text-sm font-semibold text-foreground">Progress by Topic</h3>
         </div>
         <div className="p-5 flex flex-col gap-5">
-          {mockTopics.map((topic, idx) => {
+          {topics.length === 0 && <p className="text-sm text-muted-foreground">No topic data yet.</p>}
+          {topics.map((topic, idx) => {
             const pct = Math.round((topic.completed / topic.total) * 100)
             const { bar, text } = colorClasses[idx % colorClasses.length]
             return (
@@ -48,7 +53,7 @@ export function ProgressPage() {
 
       {/* Summary grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {mockTopics.map((topic, idx) => {
+        {topics.map((topic, idx) => {
           const pct = Math.round((topic.completed / topic.total) * 100)
           const { text } = colorClasses[idx % colorClasses.length]
           return (

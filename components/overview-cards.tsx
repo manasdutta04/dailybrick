@@ -1,7 +1,7 @@
 "use client"
 
 import { CheckCircle2, Clock, ListTodo, TrendingUp } from "lucide-react"
-import { Task } from "@/lib/mock-data"
+import type { Task } from "@/lib/types"
 
 interface OverviewCardsProps {
   tasks: Task[]
