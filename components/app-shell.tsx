@@ -10,6 +10,7 @@ import { TeamPage } from "@/components/team-page"
 import { ProgressPage } from "@/components/progress-page"
 import { SettingsPage } from "@/components/settings-page"
 import { ToastContainer, useToasts } from "@/components/toast-notifications"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   getCurrentUser,
   getDueReminderTasks,
@@ -41,6 +42,92 @@ function pathToPage(pathname: string): Page {
   if (pathname.startsWith("/settings")) return "settings"
   if (pathname.startsWith("/progress")) return "progress"
   return "dashboard"
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={`dash-stat-${index}`} className="rounded-2xl border border-border/80 bg-card p-4">
+            <Skeleton className="h-3 w-24 mb-3" />
+            <Skeleton className="h-6 w-20" />
+          </div>
+        ))}
+      </div>
+      <div className="rounded-2xl border border-border/80 bg-card p-5 space-y-3">
+        <Skeleton className="h-4 w-36" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-3/4" />
+      </div>
+    </div>
+  )
+}
+
+function TeamSkeleton() {
+  return (
+    <div className="space-y-5">
+      <div className="rounded-2xl border border-border/80 bg-card p-5 space-y-3">
+        <Skeleton className="h-5 w-40" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+      <div className="rounded-2xl border border-border/80 bg-card p-5 space-y-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div key={`team-member-${index}`} className="flex items-center gap-3">
+            <Skeleton className="h-10 w-10 rounded-full" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-3 w-36" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function ProgressSkeleton() {
+  return (
+    <div className="space-y-4">
+      {Array.from({ length: 4 }).map((_, index) => (
+        <div key={`progress-topic-${index}`} className="rounded-2xl border border-border/80 bg-card p-5 space-y-3">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-2.5 w-full" />
+          <Skeleton className="h-3 w-20" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function SettingsSkeleton() {
+  return (
+    <div className="space-y-5">
+      <div className="rounded-2xl border border-border/80 bg-card p-5 space-y-3">
+        <Skeleton className="h-5 w-32" />
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-12 w-12 rounded-xl" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-3 w-44" />
+          </div>
+        </div>
+      </div>
+      <div className="rounded-2xl border border-border/80 bg-card p-5 space-y-3">
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+    </div>
+  )
+}
+
+function PageSkeleton({ page }: { page: Page }) {
+  if (page === "team") return <TeamSkeleton />
+  if (page === "progress") return <ProgressSkeleton />
+  if (page === "settings") return <SettingsSkeleton />
+  return <DashboardSkeleton />
 }
 
 export function AppShell() {
@@ -247,42 +334,49 @@ export function AppShell() {
         />
 
         <main className="flex-1 px-4 py-4 md:p-6 overflow-y-auto pb-20 md:pb-6">
-          {isLoadingData && <p className="text-xs text-muted-foreground mb-4">Syncing DailyBrick...</p>}
-          {activePage === "dashboard" && (
-            <DashboardPage
-              userName={userDisplayName}
-              tasks={tasks}
-              carriedTasks={carriedTasks}
-              setTasks={setTasks}
-              setCarriedTasks={setCarriedTasks}
-              teamId={teamId}
-              userId={user.id}
-              quickStats={quickStats}
-              refreshAll={refreshAll}
-              showNotification={showNotification}
-            />
-          )}
-          {activePage === "team" && (
-            <TeamPage
-              user={user}
-              teamId={teamId}
-              teamCode={teamCode}
-              teamOwnerId={teamOwnerId}
-              teamMembers={teamMembers}
-              refreshAll={refreshAll}
-              showNotification={showNotification}
-            />
-          )}
-          {activePage === "progress" && <ProgressPage topics={topics} />}
-          {activePage === "settings" && (
-            <SettingsPage
-              userId={user.id}
-              userName={userDisplayName}
-              userEmail={userEmail}
-              refreshAll={refreshAll}
-              showNotification={showNotification}
-            />
-          )}
+          <div key={activePage} className="page-transition-in">
+            {isLoadingData ? (
+              <PageSkeleton page={activePage} />
+            ) : (
+              <>
+                {activePage === "dashboard" && (
+                  <DashboardPage
+                    userName={userDisplayName}
+                    tasks={tasks}
+                    carriedTasks={carriedTasks}
+                    setTasks={setTasks}
+                    setCarriedTasks={setCarriedTasks}
+                    teamId={teamId}
+                    userId={user.id}
+                    quickStats={quickStats}
+                    refreshAll={refreshAll}
+                    showNotification={showNotification}
+                  />
+                )}
+                {activePage === "team" && (
+                  <TeamPage
+                    user={user}
+                    teamId={teamId}
+                    teamCode={teamCode}
+                    teamOwnerId={teamOwnerId}
+                    teamMembers={teamMembers}
+                    refreshAll={refreshAll}
+                    showNotification={showNotification}
+                  />
+                )}
+                {activePage === "progress" && <ProgressPage topics={topics} />}
+                {activePage === "settings" && (
+                  <SettingsPage
+                    userId={user.id}
+                    userName={userDisplayName}
+                    userEmail={userEmail}
+                    refreshAll={refreshAll}
+                    showNotification={showNotification}
+                  />
+                )}
+              </>
+            )}
+          </div>
         </main>
 
         <BottomNav activePage={activePage} onNavigate={handleNavigate} />

@@ -137,5 +137,47 @@
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid var(--glass-border);
   }
+
+  .page-transition-in {
+    animation: page-fade-slide 360ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: opacity, transform, filter;
+  }
+}
+
+@keyframes page-fade-slide {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.995);
+    filter: blur(3px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 180% 0;
+    opacity: 0.72;
+  }
+  50% {
+    opacity: 0.92;
+  }
+  100% {
+    background-position: -40% 0;
+    opacity: 0.72;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-transition-in {
+    animation: none;
+  }
+
+  [data-slot='skeleton'] {
+    animation: none !important;
+  }
 }
 
