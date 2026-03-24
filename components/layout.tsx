@@ -3,7 +3,7 @@
 import { Box, LayoutDashboard, CheckSquare, Users, Settings, ChevronDown, Bell, LogOut } from "lucide-react"
 import { useState } from "react"
 
-type Page = "dashboard" | "tasks" | "team" | "settings" | "progress"
+type Page = "dashboard" | "team" | "settings" | "progress"
 
 interface NavbarProps {
   activePage: Page
@@ -13,7 +13,6 @@ interface NavbarProps {
 
 const navItems: { id: Page; label: string; icon: React.ElementType }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "tasks", label: "Tasks", icon: CheckSquare },
   { id: "team", label: "Team", icon: Users },
   { id: "settings", label: "Settings", icon: Settings },
 ]

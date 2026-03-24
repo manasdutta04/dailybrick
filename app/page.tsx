@@ -4,19 +4,16 @@ import { useState } from "react"
 import { AuthPage } from "@/components/auth-page"
 import { Sidebar, Topbar } from "@/components/layout"
 import { DashboardPage } from "@/components/dashboard-page"
-import { TasksSection } from "@/components/tasks-section"
 import { TeamPage } from "@/components/team-page"
 import { ProgressPage } from "@/components/progress-page"
 import { SettingsPage } from "@/components/settings-page"
 import { ToastContainer, useToasts } from "@/components/toast-notifications"
 import { mockTasks, Task } from "@/lib/mock-data"
-import { OverviewCards } from "@/components/overview-cards"
 
-type Page = "dashboard" | "tasks" | "team" | "settings" | "progress"
+type Page = "dashboard" | "team" | "settings" | "progress"
 
 const pageTitles: Record<Page, string> = {
   dashboard: "Dashboard",
-  tasks: "Tasks",
   team: "Team",
   settings: "Settings",
   progress: "Progress",
@@ -53,12 +50,6 @@ export default function Home() {
         <main className="flex-1 p-6 overflow-y-auto">
           {activePage === "dashboard" && (
             <DashboardPage tasks={tasks} setTasks={setTasks} showNotification={showNotification} />
-          )}
-          {activePage === "tasks" && (
-            <div className="flex flex-col gap-6 max-w-3xl">
-              <OverviewCards tasks={tasks} />
-              <TasksSection tasks={tasks} setTasks={setTasks} showNotification={showNotification} />
-            </div>
           )}
           {activePage === "team" && <TeamPage />}
           {activePage === "progress" && <ProgressPage />}
