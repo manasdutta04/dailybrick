@@ -47,7 +47,9 @@ function TaskRow({ task, onToggle, onDelete, disabled }: TaskRowProps) {
           disabled && "cursor-default"
         )}
       >
-        {task.status === "completed" && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />}
+        {task.status === "completed" && (
+          <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />
+        )}
       </button>
 
       <div className="flex-1 min-w-0">
@@ -85,7 +87,7 @@ function TaskRow({ task, onToggle, onDelete, disabled }: TaskRowProps) {
         <button
           onClick={() => onDelete(task.id)}
           aria-label="Delete task"
-          className="opacity-0 group-hover:opacity-100 w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-150 shrink-0"
+          className="sm:opacity-0 sm:group-hover:opacity-100 opacity-100 w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-150 shrink-0"
         >
           <Trash2 className="w-3.5 h-3.5" />
         </button>
@@ -97,7 +99,6 @@ function TaskRow({ task, onToggle, onDelete, disabled }: TaskRowProps) {
 interface TasksSectionProps {
   tasks: Task[]
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>
-  onAddTask?: (task: Task) => void
   showNotification?: (msg: string) => void
 }
 
@@ -142,15 +143,22 @@ export function TasksSection({ tasks, setTasks, showNotification }: TasksSection
 
   const toggleTask = (id: string) => {
     setTasks((prev) =>
-      prev.map((t) => t.id === id ? { ...t, status: t.status === "completed" ? "pending" : "completed" } : t)
+      prev.map((t) =>
+        t.id === id ? { ...t, status: t.status === "completed" ? "pending" : "completed" } : t
+      )
     )
   }
 
   const deleteTask = (id: string) => setTasks((prev) => prev.filter((t) => t.id !== id))
-  const deleteCarriedTask = (id: string) => setCarriedTasks((prev) => prev.filter((t) => t.id !== id))
+
+  const deleteCarriedTask = (id: string) =>
+    setCarriedTasks((prev) => prev.filter((t) => t.id !== id))
+
   const toggleCarried = (id: string) => {
     setCarriedTasks((prev) =>
-      prev.map((t) => t.id === id ? { ...t, status: t.status === "completed" ? "pending" : "completed" } : t)
+      prev.map((t) =>
+        t.id === id ? { ...t, status: t.status === "completed" ? "pending" : "completed" } : t
+      )
     )
   }
 
@@ -177,7 +185,10 @@ export function TasksSection({ tasks, setTasks, showNotification }: TasksSection
   const addTask = () => {
     if (!newTitle.trim()) return
     const timeLabel = newTime
-      ? new Date(`2000-01-01T${newTime}`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+      ? new Date(`2000-01-01T${newTime}`).toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+        })
       : "Any time"
     const task: Task = {
       id: `task-${Date.now()}`,
@@ -195,21 +206,30 @@ export function TasksSection({ tasks, setTasks, showNotification }: TasksSection
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Carried forward */}
       {carriedTasks.length > 0 && (
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <div className="flex items-center gap-2 px-5 py-3.5 border-b border-border bg-chart-5/5">
             <ArrowUpFromLine className="w-4 h-4 text-chart-5" />
             <h3 className="text-sm font-semibold text-foreground">Moved from Yesterday</h3>
-            <span className="ml-auto text-xs text-muted-foreground">{carriedTasks.length} tasks</span>
+            <span className="ml-auto text-xs text-muted-foreground">
+              {carriedTasks.length} tasks
+            </span>
           </div>
           <div className="px-2 py-1">
             {carriedTasks.map((task) => (
-              <TaskRow key={task.id} task={task} onToggle={toggleCarried} onDelete={deleteCarriedTask} />
+              <TaskRow
+                key={task.id}
+                task={task}
+                onToggle={toggleCarried}
+                onDelete={deleteCarriedTask}
+              />
             ))}
           </div>
         </div>
       )}
 
+      {/* Today's tasks */}
       <div className="bg-card border border-border rounded-2xl overflow-visible">
         <div className="flex items-center gap-2 px-5 py-3.5 border-b border-border rounded-t-2xl">
           <CalendarClock className="w-4 h-4 text-primary" />
@@ -224,18 +244,27 @@ export function TasksSection({ tasks, setTasks, showNotification }: TasksSection
                 <CalendarClock className="w-5 h-5 text-muted-foreground" />
               </div>
               <p className="text-sm font-medium text-muted-foreground">No tasks for today</p>
-              <p className="text-xs text-muted-foreground/70">Add your first task below to get started</p>
+              <p className="text-xs text-muted-foreground/70">
+                Add your first task below to get started
+              </p>
             </div>
           ) : (
             tasks.map((task) => (
-              <TaskRow key={task.id} task={task} onToggle={toggleTask} onDelete={deleteTask} />
+              <TaskRow
+                key={task.id}
+                task={task}
+                onToggle={toggleTask}
+                onDelete={deleteTask}
+              />
             ))
           )}
         </div>
 
+        {/* Add task — title full-width on mobile, all inline on sm+ */}
         <div className="px-4 pb-4 pt-3 border-t border-border">
-          <div className="flex gap-2 items-center">
-            <div className="flex-[6]">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            {/* Title */}
+            <div className="w-full sm:flex-[6]">
               <Input
                 placeholder="Add a new task..."
                 value={newTitle}
@@ -245,108 +274,122 @@ export function TasksSection({ tasks, setTasks, showNotification }: TasksSection
               />
             </div>
 
-            <div className="flex-[1.5]">
-              {showCustomInput ? (
-                <div className="flex gap-1">
-                  <Input
-                    placeholder="Topic..."
-                    value={customTopic}
-                    onChange={(e) => setCustomTopic(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && confirmCustomTopic()}
-                    className="h-9 w-full bg-secondary border-border text-foreground placeholder:text-muted-foreground rounded-xl text-sm"
-                    autoFocus
-                  />
-                  <Button
-                    onClick={confirmCustomTopic}
-                    size="sm"
-                    className="h-9 px-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl shrink-0"
+            {/* Topic + Time + Add */}
+            <div className="flex gap-2 items-center">
+              {/* Topic */}
+              <div className="flex-[3] sm:flex-[1.5]">
+                {showCustomInput ? (
+                  <div className="flex gap-1">
+                    <Input
+                      placeholder="Topic..."
+                      value={customTopic}
+                      onChange={(e) => setCustomTopic(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && confirmCustomTopic()}
+                      className="h-9 w-full bg-secondary border-border text-foreground placeholder:text-muted-foreground rounded-xl text-sm"
+                      autoFocus
+                    />
+                    <Button
+                      onClick={confirmCustomTopic}
+                      size="sm"
+                      className="h-9 px-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl shrink-0"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                ) : (
+                  <button
+                    ref={triggerRef}
+                    onClick={openDropdown}
+                    className="flex items-center gap-1.5 h-9 w-full px-3 bg-secondary border border-border rounded-xl text-sm text-foreground hover:bg-secondary/80 transition-colors"
                   >
-                    <Check className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-              ) : (
-                <button
-                  ref={triggerRef}
-                  onClick={openDropdown}
-                  className="flex items-center gap-1.5 h-9 w-full px-3 bg-secondary border border-border rounded-xl text-sm text-foreground hover:bg-secondary/80 transition-colors"
+                    <Tag className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                    <span
+                      className={cn(
+                        "flex-1 text-left truncate text-xs",
+                        !newTopic && "text-muted-foreground"
+                      )}
+                    >
+                      {newTopic || "Topic"}
+                    </span>
+                    <ChevronDown className="w-3 h-3 text-muted-foreground shrink-0" />
+                  </button>
+                )}
+              </div>
+
+              {/* Time */}
+              <div className="flex-[3] sm:flex-[1.5]">
+                <input
+                  type="time"
+                  value={newTime}
+                  onChange={(e) => setNewTime(e.target.value)}
+                  className="h-9 w-full px-2 bg-secondary border border-border rounded-xl text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+
+              {/* Add */}
+              <div className="flex-1">
+                <Button
+                  onClick={addTask}
+                  className="h-9 w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl"
+                  aria-label="Add task"
                 >
-                  <Tag className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                  <span className={cn("flex-1 text-left truncate text-xs", !newTopic && "text-muted-foreground")}>
-                    {newTopic || "Topic"}
-                  </span>
-                  <ChevronDown className="w-3 h-3 text-muted-foreground shrink-0" />
-                </button>
-              )}
-            </div>
-
-            <div className="flex-[1.5]">
-              <input
-                type="time"
-                value={newTime}
-                onChange={(e) => setNewTime(e.target.value)}
-                className="h-9 w-full px-2 bg-secondary border border-border rounded-xl text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-
-            <div className="flex-1">
-              <Button
-                onClick={addTask}
-                className="h-9 w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl"
-                aria-label="Add task"
-              >
-                <Plus className="w-4 h-4" />
-              </Button>
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {showTopicDropdown && typeof window !== "undefined" && createPortal(
-        <div
-          ref={dropdownRef}
-          style={{
-            position: "absolute",
-            top: dropdownPos.top,
-            left: dropdownPos.left,
-            width: dropdownPos.width,
-            zIndex: 9999,
-          }}
-          className="bg-popover border border-border rounded-xl shadow-xl py-1"
-        >
-          {PREDEFINED_TOPICS.map((topic) => (
-            <button
-              key={topic}
-              onClick={() => selectTopic(topic)}
-              className={cn(
-                "w-full px-3 py-2 text-left text-sm hover:bg-secondary/60 transition-colors",
-                newTopic === topic ? "text-primary font-medium" : "text-foreground"
-              )}
-            >
-              {topic}
-            </button>
-          ))}
-          <div className="border-t border-border my-1" />
-          <button
-            onClick={handleAddCustomTopic}
-            className="w-full px-3 py-2 text-left text-sm text-primary hover:bg-secondary/60 transition-colors flex items-center gap-2"
+      {/* Topic dropdown portal */}
+      {showTopicDropdown &&
+        typeof window !== "undefined" &&
+        createPortal(
+          <div
+            ref={dropdownRef}
+            style={{
+              position: "absolute",
+              top: dropdownPos.top,
+              left: dropdownPos.left,
+              width: dropdownPos.width,
+              zIndex: 9999,
+            }}
+            className="bg-popover border border-border rounded-xl shadow-xl py-1"
           >
-            <Plus className="w-3.5 h-3.5" />
-            Add other
-          </button>
-          {newTopic && (
-            <>
-              <div className="border-t border-border my-1" />
+            {PREDEFINED_TOPICS.map((topic) => (
               <button
-                onClick={() => selectTopic("")}
-                className="w-full px-3 py-2 text-left text-sm text-muted-foreground hover:bg-secondary/60 transition-colors"
+                key={topic}
+                onClick={() => selectTopic(topic)}
+                className={cn(
+                  "w-full px-3 py-2 text-left text-sm hover:bg-secondary/60 transition-colors",
+                  newTopic === topic ? "text-primary font-medium" : "text-foreground"
+                )}
               >
-                Clear topic
+                {topic}
               </button>
-            </>
-          )}
-        </div>,
-        document.body
-      )}
+            ))}
+            <div className="border-t border-border my-1" />
+            <button
+              onClick={handleAddCustomTopic}
+              className="w-full px-3 py-2 text-left text-sm text-primary hover:bg-secondary/60 transition-colors flex items-center gap-2"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Add other
+            </button>
+            {newTopic && (
+              <>
+                <div className="border-t border-border my-1" />
+                <button
+                  onClick={() => selectTopic("")}
+                  className="w-full px-3 py-2 text-left text-sm text-muted-foreground hover:bg-secondary/60 transition-colors"
+                >
+                  Clear topic
+                </button>
+              </>
+            )}
+          </div>,
+          document.body
+        )}
     </div>
   )
 }
