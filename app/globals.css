@@ -40,6 +40,10 @@
   --sidebar-ring: oklch(0.6 0.18 160);
   --glass-bg: oklch(1 0 0 / 0.7);
   --glass-border: oklch(0.85 0 0 / 0.5);
+  --scrollbar-track: oklch(0.95 0 0 / 0.42);
+  --scrollbar-thumb: oklch(0.78 0.01 230 / 0.6);
+  --scrollbar-thumb-hover: oklch(0.72 0.02 230 / 0.8);
+  --scrollbar-thumb-active: oklch(0.68 0.02 230 / 0.9);
 }
 
 .dark {
@@ -78,6 +82,10 @@
   --sidebar-ring: oklch(0.75 0.18 160);
   --glass-bg: oklch(0.18 0 0 / 0.6);
   --glass-border: oklch(0.35 0 0 / 0.4);
+  --scrollbar-track: oklch(0.2 0 0 / 0.5);
+  --scrollbar-thumb: oklch(0.6 0.02 230 / 0.55);
+  --scrollbar-thumb-hover: oklch(0.68 0.02 230 / 0.75);
+  --scrollbar-thumb-active: oklch(0.74 0.02 230 / 0.88);
 }
 
 @theme inline {
@@ -127,6 +135,60 @@
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  /* Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+
+  /* Chromium / Safari */
+  *::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--scrollbar-track), transparent 24%) 0%,
+      color-mix(in oklab, var(--scrollbar-track), transparent 42%) 100%
+    );
+    border: 1px solid color-mix(in oklab, var(--scrollbar-thumb), transparent 84%);
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, white, transparent 92%);
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--scrollbar-thumb), white 12%) 0%,
+      color-mix(in oklab, var(--scrollbar-thumb), black 9%) 100%
+    );
+    border: 2px solid color-mix(in oklab, var(--scrollbar-track), transparent 50%);
+    border-radius: 999px;
+    box-shadow:
+      inset 0 1px 1px color-mix(in oklab, white, transparent 70%),
+      0 6px 14px color-mix(in oklab, black, transparent 82%);
+    background-clip: padding-box;
+    transition: background 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--scrollbar-thumb-hover), white 10%) 0%,
+      color-mix(in oklab, var(--scrollbar-thumb-hover), black 10%) 100%
+    );
+  }
+
+  *::-webkit-scrollbar-thumb:active {
+    background: linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--scrollbar-thumb-active), white 8%) 0%,
+      color-mix(in oklab, var(--scrollbar-thumb-active), black 12%) 100%
+    );
   }
 }
 
