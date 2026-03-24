@@ -34,7 +34,7 @@ export function DashboardPage({
     { label: "Streak", value: quickStats.streak, icon: CalendarClock },
     { label: "Done this week", value: quickStats.doneThisWeek, icon: CheckSquare },
     { label: "Top topic", value: quickStats.topTopic, icon: BarChart3 },
-    { label: "Team rank", value: quickStats.teamRank, icon: Users2 },
+    { label: "Team members", value: quickStats.teamMembers, icon: Users2 },
   ]
 
   return (

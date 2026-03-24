@@ -38,7 +38,7 @@ export interface DashboardQuickStats {
   streak: string
   doneThisWeek: string
   topTopic: string
-  teamRank: string
+  teamMembers: string
 }
 
 export interface AppSnapshot {

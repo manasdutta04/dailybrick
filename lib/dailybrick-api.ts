@@ -456,9 +456,6 @@ export async function loadAppSnapshot(user: User): Promise<AppSnapshot> {
       return bPct - aPct
     })[0]?.name ?? "No topic yet"
 
-  const sortedMembers = [...teamMembers].sort((a, b) => b.completionPercent - a.completionPercent)
-  const myIndex = sortedMembers.findIndex((member) => member.isYou)
-
   return {
     profile,
     teamId: team?.id ?? null,
@@ -472,7 +469,7 @@ export async function loadAppSnapshot(user: User): Promise<AppSnapshot> {
       streak: `${streak} day${streak === 1 ? "" : "s"}`,
       doneThisWeek: `${doneThisWeek} task${doneThisWeek === 1 ? "" : "s"}`,
       topTopic,
-      teamRank: myIndex >= 0 ? `#${myIndex + 1}` : "-",
+      teamMembers: `${teamMembers.length}/2`,
     },
   }
 }
