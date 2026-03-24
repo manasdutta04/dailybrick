@@ -10,22 +10,10 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: 'DailyBrick — Daily Task Manager',
   description: 'Track your daily tasks, collaborate with your team, and stay on top of your goals with DailyBrick.',
-  generator: 'v0.app',
+  generator: 'DailyBrick',
   icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
+    icon: [{ url: '/icon.svg?v=2', type: 'image/svg+xml' }],
+    shortcut: [{ url: '/icon.svg?v=2', type: 'image/svg+xml' }],
     apple: '/apple-icon.png',
   },
 }
