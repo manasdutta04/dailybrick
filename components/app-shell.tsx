@@ -157,6 +157,8 @@ export function AppShell() {
   })
   const { toasts, showNotification, dismissToast } = useToasts()
   const lastLoadErrorRef = useRef<string | null>(null)
+  const browserNotificationPermissionAskedRef = useRef(false)
+  const reminderModeNoticeShownRef = useRef(false)
 
   const userDisplayName = useMemo(() => {
     if (profile?.fullName) return profile.fullName
@@ -288,14 +290,43 @@ export function AppShell() {
   }, [applySnapshot, refreshAll, user])
 
   useEffect(() => {
+    if (!user || reminderModeNoticeShownRef.current) return
+
+    const provider = user.app_metadata?.provider
+    if (provider !== "google") {
+      showNotification("Email account detected: reminders will use in-app and browser notifications.")
+    }
+
+    reminderModeNoticeShownRef.current = true
+  }, [showNotification, user])
+
+  useEffect(() => {
     if (!user) return
 
     const runReminderPoll = async () => {
       try {
         const due = await getDueReminderTasks(user.id)
         if (due.length === 0) return
+
+        if (
+          typeof window !== "undefined" &&
+          "Notification" in window &&
+          Notification.permission === "default" &&
+          !browserNotificationPermissionAskedRef.current
+        ) {
+          browserNotificationPermissionAskedRef.current = true
+          void Notification.requestPermission()
+        }
+
         due.forEach((task) => {
-          showNotification(`Reminder: ${task.title} at ${task.time}`)
+          const message = `Reminder: ${task.title} at ${task.time}`
+          showNotification(message)
+
+          if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+            new Notification("DailyBrick reminder", {
+              body: `${task.title} at ${task.time}`,
+            })
+          }
         })
         await markDueRemindersAsSent(due.map((task) => task.id))
       } catch {
