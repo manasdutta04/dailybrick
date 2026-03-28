@@ -46,6 +46,7 @@ interface DbTopicProgress {
 
 const DB_TASK_SELECT =
   "id,user_id,task_scope,shared_task_key,calendar_event_id,title,topic,due_date,reminder_time,status,carried_forward,team_id"
+const GOOGLE_PROVIDER_TOKEN_STORAGE_KEY = "dailybrick_google_provider_token"
 
 const CODE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 
@@ -129,16 +130,67 @@ function mapTask(task: DbTask): Task {
   }
 }
 
-function toRfc3339DateTime(dueDate: string, reminderTime: string | null): string {
+function getTaskDateTimeWindow(dueDate: string, reminderTime: string | null) {
   const fallback = "09:00:00"
   const clock = reminderTime ?? fallback
-  return `${dueDate}T${clock}`
+  const start = new Date(`${dueDate}T${clock}`)
+  if (Number.isNaN(start.getTime())) {
+    throw new Error(`Invalid task date/time for calendar sync: ${dueDate} ${clock}`)
+  }
+
+  const end = new Date(start)
+  end.setMinutes(end.getMinutes() + 30)
+
+  return {
+    startDateTime: start.toISOString(),
+    endDateTime: end.toISOString(),
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+  }
+}
+
+function getCachedGoogleProviderToken(): string | null {
+  if (typeof window === "undefined") return null
+  return window.localStorage.getItem(GOOGLE_PROVIDER_TOKEN_STORAGE_KEY)
+}
+
+function setCachedGoogleProviderToken(token: string) {
+  if (typeof window === "undefined") return
+  window.localStorage.setItem(GOOGLE_PROVIDER_TOKEN_STORAGE_KEY, token)
+}
+
+function clearCachedGoogleProviderToken() {
+  if (typeof window === "undefined") return
+  window.localStorage.removeItem(GOOGLE_PROVIDER_TOKEN_STORAGE_KEY)
+}
+
+async function googleCalendarRequest(token: string, url: string, init: RequestInit): Promise<Response> {
+  const response = await fetch(url, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(init.headers ?? {}),
+    },
+  })
+
+  if (!response.ok) {
+    const details = await response.text().catch(() => "")
+    throw new Error(`Google Calendar API ${response.status}: ${details}`)
+  }
+
+  return response
 }
 
 async function getGoogleProviderToken(): Promise<string | null> {
   const { data, error } = await supabase.auth.getSession()
   if (error) throw error
-  return data.session?.provider_token ?? null
+
+  const sessionToken = data.session?.provider_token ?? null
+  if (sessionToken) {
+    setCachedGoogleProviderToken(sessionToken)
+    return sessionToken
+  }
+
+  return getCachedGoogleProviderToken()
 }
 
 async function syncTaskWithGoogleCalendar(task: DbTask) {
@@ -148,31 +200,32 @@ async function syncTaskWithGoogleCalendar(task: DbTask) {
   if (task.status === "completed") {
     if (!task.calendar_event_id) return
 
-    await fetch(
-      `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(task.calendar_event_id)}`,
-      {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+    try {
+      await googleCalendarRequest(
+        token,
+        `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(task.calendar_event_id)}`,
+        { method: "DELETE" }
+      )
+    } catch (err) {
+      const message = err instanceof Error ? err.message : ""
+      if (!message.includes("404")) {
+        throw err
       }
-    )
+    }
 
     await supabase.from("tasks").update({ calendar_event_id: null }).eq("id", task.id)
     return
   }
 
-  const startDateTime = toRfc3339DateTime(task.due_date, task.reminder_time)
-  const endDate = new Date(startDateTime)
-  endDate.setMinutes(endDate.getMinutes() + 30)
+  const { startDateTime, endDateTime, timeZone } = getTaskDateTimeWindow(task.due_date, task.reminder_time)
 
   const payload = {
     summary: task.title,
     description: `DailyBrick task${task.topic ? ` | Topic: ${task.topic}` : ""}${
       task.task_scope === "team" ? " | Team task" : ""
     }`,
-    start: { dateTime: startDateTime },
-    end: { dateTime: endDate.toISOString() },
+    start: { dateTime: startDateTime, timeZone },
+    end: { dateTime: endDateTime, timeZone },
     reminders: {
       useDefault: false,
       overrides: [
@@ -183,12 +236,12 @@ async function syncTaskWithGoogleCalendar(task: DbTask) {
   }
 
   if (task.calendar_event_id) {
-    await fetch(
+    await googleCalendarRequest(
+      token,
       `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(task.calendar_event_id)}`,
       {
         method: "PATCH",
         headers: {
-          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
@@ -197,16 +250,14 @@ async function syncTaskWithGoogleCalendar(task: DbTask) {
     return
   }
 
-  const response = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
+  const response = await googleCalendarRequest(token, "https://www.googleapis.com/calendar/v3/calendars/primary/events", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
   })
 
-  if (!response.ok) return
   const created = (await response.json()) as { id?: string }
   if (!created.id) return
 
@@ -223,8 +274,9 @@ async function syncMyTaskRowsWithGoogleCalendar(rows: DbTask[]) {
       if (row.status === "pending") {
         await syncTaskWithGoogleCalendar(row)
       }
-    } catch {
+    } catch (err) {
       // Calendar sync is best-effort and must not break task operations.
+      console.warn("Calendar sync skipped for task", row.id, err)
     }
   }
 }
@@ -513,6 +565,7 @@ export async function signOut() {
   assertSupabaseConfigured()
   const { error } = await supabase.auth.signOut()
   if (error) throw error
+  clearCachedGoogleProviderToken()
 }
 
 export async function requestPasswordReset(email: string, redirectTo: string) {
