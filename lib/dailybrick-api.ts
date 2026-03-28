@@ -56,6 +56,19 @@ function assertSupabaseConfigured() {
   }
 }
 
+function getPublicAppUrl(): string {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim()
+  if (configured) {
+    return configured.replace(/\/$/, "")
+  }
+
+  if (typeof window !== "undefined") {
+    return window.location.origin
+  }
+
+  return "http://localhost:3000"
+}
+
 function getTodayLocalDateString(): string {
   const now = new Date()
   const year = now.getFullYear()
@@ -543,12 +556,13 @@ export async function signInWithEmail(email: string, password: string) {
   return data
 }
 
-export async function signInWithGoogle(redirectTo: string) {
+export async function signInWithGoogle(redirectTo?: string) {
   assertSupabaseConfigured()
+  const finalRedirectTo = redirectTo ?? getPublicAppUrl()
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo,
+      redirectTo: finalRedirectTo,
       scopes: "https://www.googleapis.com/auth/calendar.events",
       queryParams: {
         access_type: "offline",

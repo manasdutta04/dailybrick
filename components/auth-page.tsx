@@ -17,7 +17,7 @@ export function AuthPage({ onLogin }: AuthPageProps) {
     try {
       setLoading(true)
       setError(null)
-      await signInWithGoogle(window.location.origin)
+      await signInWithGoogle()
       onLogin()
     } catch (err) {
       const message = err instanceof Error ? err.message : "Google sign-in failed"

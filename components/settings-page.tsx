@@ -60,7 +60,7 @@ export function SettingsPage({ userId, userName, userEmail, refreshAll, showNoti
 
   const handleConnectGoogleCalendar = async () => {
     try {
-      await signInWithGoogle(window.location.origin)
+      await signInWithGoogle()
     } catch (err) {
       const message = err instanceof Error ? err.message : "Could not connect Google Calendar"
       showNotification(message)
