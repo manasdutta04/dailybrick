@@ -1,17 +1,17 @@
-"use client"
+"use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { usePathname, useRouter } from "next/navigation"
-import type { User } from "@supabase/supabase-js"
-import { Sidebar, Topbar, BottomNav } from "@/components/layout"
-import { DashboardPage } from "@/components/dashboard-page"
-import { JournalPage } from "@/components/journal-page"
-import { TeamPage } from "@/components/team-page"
-import { ProgressPage } from "@/components/progress-page"
-import { SettingsPage } from "@/components/settings-page"
-import { ToastContainer, useToasts } from "@/components/toast-notifications"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Spinner } from "@/components/ui/spinner"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import type { User } from "@supabase/supabase-js";
+import { Sidebar, Topbar, BottomNav } from "@/components/layout";
+import { DashboardPage } from "@/components/dashboard-page";
+import { JournalPage } from "@/components/journal-page";
+import { TeamPage } from "@/components/team-page";
+import { ProgressPage } from "@/components/progress-page";
+import { SettingsPage } from "@/components/settings-page";
+import { ToastContainer, useToasts } from "@/components/toast-notifications";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import {
   getCurrentUser,
   getDueReminderTasks,
@@ -19,11 +19,17 @@ import {
   markDueRemindersAsSent,
   onAuthStateChange,
   signOut,
-} from "@/lib/dailybrick-api"
-import type { DashboardQuickStats, Task, TeamMember, TopicProgress, UserProfile } from "@/lib/types"
-import type { AppSnapshot } from "@/lib/types"
+} from "@/lib/dailybrick-api";
+import type {
+  DashboardQuickStats,
+  Task,
+  TeamMember,
+  TopicProgress,
+  UserProfile,
+} from "@/lib/types";
+import type { AppSnapshot } from "@/lib/types";
 
-type Page = "dashboard" | "team" | "settings" | "progress" | "journal"
+type Page = "dashboard" | "team" | "settings" | "progress" | "journal";
 
 const pageTitles: Record<Page, string> = {
   dashboard: "Dashboard",
@@ -31,7 +37,7 @@ const pageTitles: Record<Page, string> = {
   settings: "Settings",
   progress: "Progress",
   journal: "Journal",
-}
+};
 
 const pagePaths: Record<Page, string> = {
   dashboard: "/",
@@ -39,24 +45,27 @@ const pagePaths: Record<Page, string> = {
   settings: "/settings",
   progress: "/progress",
   journal: "/journal",
-}
+};
 
 function pathToPage(pathname: string): Page {
-  if (pathname.startsWith("/team")) return "team"
-  if (pathname.startsWith("/settings")) return "settings"
-  if (pathname.startsWith("/progress")) return "progress"
-  if (pathname.startsWith("/journal")) return "journal"
-  return "dashboard"
+  if (pathname.startsWith("/team")) return "team";
+  if (pathname.startsWith("/settings")) return "settings";
+  if (pathname.startsWith("/progress")) return "progress";
+  if (pathname.startsWith("/journal")) return "journal";
+  return "dashboard";
 }
 
-let appSnapshotCache: { userId: string; snapshot: AppSnapshot } | null = null
+let appSnapshotCache: { userId: string; snapshot: AppSnapshot } | null = null;
 
 function DashboardSkeleton() {
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, index) => (
-          <div key={`dash-stat-${index}`} className="rounded-2xl border border-border/80 bg-card p-4">
+          <div
+            key={`dash-stat-${index}`}
+            className="rounded-2xl border border-border/80 bg-card p-4"
+          >
             <Skeleton className="h-3 w-24 mb-3" />
             <Skeleton className="h-6 w-20" />
           </div>
@@ -69,7 +78,7 @@ function DashboardSkeleton() {
         <Skeleton className="h-10 w-3/4" />
       </div>
     </div>
-  )
+  );
 }
 
 function TeamSkeleton() {
@@ -91,21 +100,24 @@ function TeamSkeleton() {
         ))}
       </div>
     </div>
-  )
+  );
 }
 
 function ProgressSkeleton() {
   return (
     <div className="space-y-4">
       {Array.from({ length: 4 }).map((_, index) => (
-        <div key={`progress-topic-${index}`} className="rounded-2xl border border-border/80 bg-card p-5 space-y-3">
+        <div
+          key={`progress-topic-${index}`}
+          className="rounded-2xl border border-border/80 bg-card p-5 space-y-3"
+        >
           <Skeleton className="h-4 w-32" />
           <Skeleton className="h-2.5 w-full" />
           <Skeleton className="h-3 w-20" />
         </div>
       ))}
     </div>
-  )
+  );
 }
 
 function SettingsSkeleton() {
@@ -127,7 +139,7 @@ function SettingsSkeleton() {
         <Skeleton className="h-10 w-full" />
       </div>
     </div>
-  )
+  );
 }
 
 function JournalSkeleton() {
@@ -136,7 +148,10 @@ function JournalSkeleton() {
       <div className="rounded-2xl border border-border/80 bg-card p-4 space-y-3">
         <Skeleton className="h-9 w-32" />
         {Array.from({ length: 4 }).map((_, index) => (
-          <Skeleton key={`journal-skeleton-note-${index}`} className="h-24 w-full" />
+          <Skeleton
+            key={`journal-skeleton-note-${index}`}
+            className="h-24 w-full"
+          />
         ))}
       </div>
       <div className="rounded-2xl border border-border/80 bg-card p-4 space-y-3">
@@ -145,182 +160,195 @@ function JournalSkeleton() {
         <Skeleton className="h-80 w-full" />
       </div>
     </div>
-  )
+  );
 }
 
 function PageSkeleton({ page }: { page: Page }) {
-  if (page === "team") return <TeamSkeleton />
-  if (page === "progress") return <ProgressSkeleton />
-  if (page === "settings") return <SettingsSkeleton />
-  if (page === "journal") return <JournalSkeleton />
-  return <DashboardSkeleton />
+  if (page === "team") return <TeamSkeleton />;
+  if (page === "progress") return <ProgressSkeleton />;
+  if (page === "settings") return <SettingsSkeleton />;
+  if (page === "journal") return <JournalSkeleton />;
+  return <DashboardSkeleton />;
 }
 
 export function AppShell() {
-  const router = useRouter()
-  const pathname = usePathname()
-  const activePage = pathToPage(pathname)
+  const router = useRouter();
+  const pathname = usePathname();
+  const activePage = pathToPage(pathname);
 
-  const [user, setUser] = useState<User | null>(null)
-  const [isBooting, setIsBooting] = useState(true)
-  const [isLoadingData, setIsLoadingData] = useState(false)
-  const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [teamId, setTeamId] = useState<string | null>(null)
-  const [teamCode, setTeamCode] = useState<string | null>(null)
-  const [teamOwnerId, setTeamOwnerId] = useState<string | null>(null)
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [carriedTasks, setCarriedTasks] = useState<Task[]>([])
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
-  const [topics, setTopics] = useState<TopicProgress[]>([])
+  const [user, setUser] = useState<User | null>(null);
+  const [isBooting, setIsBooting] = useState(true);
+  const [isLoadingData, setIsLoadingData] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [teamId, setTeamId] = useState<string | null>(null);
+  const [teamCode, setTeamCode] = useState<string | null>(null);
+  const [teamOwnerId, setTeamOwnerId] = useState<string | null>(null);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [carriedTasks, setCarriedTasks] = useState<Task[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [topics, setTopics] = useState<TopicProgress[]>([]);
   const [quickStats, setQuickStats] = useState<DashboardQuickStats>({
     streak: "0 days",
     doneThisWeek: "0 tasks",
     topTopic: "No topic yet",
     teamMembers: "0/2",
-  })
-  const { toasts, notificationFeed, showNotification, dismissToast, clearNotificationFeed } = useToasts()
-  const lastLoadErrorRef = useRef<string | null>(null)
-  const browserNotificationPermissionAskedRef = useRef(false)
+  });
+  const {
+    toasts,
+    notificationFeed,
+    showNotification,
+    dismissToast,
+    clearNotificationFeed,
+  } = useToasts();
+  const lastLoadErrorRef = useRef<string | null>(null);
+  const browserNotificationPermissionAskedRef = useRef(false);
 
   const userDisplayName = useMemo(() => {
-    if (profile?.fullName) return profile.fullName
-    if (user?.email) return user.email.split("@")[0] ?? "DailyBrick User"
-    return "DailyBrick User"
-  }, [profile?.fullName, user?.email])
+    if (profile?.fullName) return profile.fullName;
+    if (user?.email) return user.email.split("@")[0] ?? "DailyBrick User";
+    return "DailyBrick User";
+  }, [profile?.fullName, user?.email]);
 
-  const userEmail = profile?.email ?? user?.email ?? ""
+  const userEmail = profile?.email ?? user?.email ?? "";
 
   const applySnapshot = useCallback((snapshot: AppSnapshot) => {
-    setProfile(snapshot.profile)
-    setTeamId(snapshot.teamId)
-    setTeamCode(snapshot.teamCode)
-    setTeamOwnerId(snapshot.teamOwnerId)
-    setTasks(snapshot.tasks)
-    setCarriedTasks(snapshot.carriedTasks)
-    setTeamMembers(snapshot.teamMembers)
-    setTopics(snapshot.topics)
-    setQuickStats(snapshot.quickStats)
-  }, [])
+    setProfile(snapshot.profile);
+    setTeamId(snapshot.teamId);
+    setTeamCode(snapshot.teamCode);
+    setTeamOwnerId(snapshot.teamOwnerId);
+    setTasks(snapshot.tasks);
+    setCarriedTasks(snapshot.carriedTasks);
+    setTeamMembers(snapshot.teamMembers);
+    setTopics(snapshot.topics);
+    setQuickStats(snapshot.quickStats);
+  }, []);
 
-  const refreshAll = useCallback(async (options?: { silent?: boolean }) => {
-    if (!user) return
-    try {
-      if (!options?.silent) {
-        setIsLoadingData(true)
-      }
-      const snapshot = await loadAppSnapshot(user)
-      applySnapshot(snapshot)
-      appSnapshotCache = { userId: user.id, snapshot }
-      lastLoadErrorRef.current = null
-    } catch (err) {
-      const originalMessage = err instanceof Error ? err.message : "Could not load app data"
-      const mappedMessage =
-        /404|relation|profiles|tasks|not found/i.test(originalMessage)
+  const refreshAll = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!user) return;
+      try {
+        if (!options?.silent) {
+          setIsLoadingData(true);
+        }
+        const snapshot = await loadAppSnapshot(user);
+        applySnapshot(snapshot);
+        appSnapshotCache = { userId: user.id, snapshot };
+        lastLoadErrorRef.current = null;
+      } catch (err) {
+        const originalMessage =
+          err instanceof Error ? err.message : "Could not load app data";
+        const mappedMessage = /404|relation|profiles|tasks|not found/i.test(
+          originalMessage,
+        )
           ? "Supabase tables are missing. Run supabase/schema.sql in Supabase SQL Editor."
-          : originalMessage
+          : originalMessage;
 
-      if (lastLoadErrorRef.current !== mappedMessage) {
-        showNotification(mappedMessage)
-        lastLoadErrorRef.current = mappedMessage
+        if (lastLoadErrorRef.current !== mappedMessage) {
+          showNotification(mappedMessage);
+          lastLoadErrorRef.current = mappedMessage;
+        }
+      } finally {
+        if (!options?.silent) {
+          setIsLoadingData(false);
+        }
       }
-    } finally {
-      if (!options?.silent) {
-        setIsLoadingData(false)
-      }
-    }
-  }, [applySnapshot, showNotification, user])
+    },
+    [applySnapshot, showNotification, user],
+  );
 
   const handleLogout = useCallback(async () => {
     try {
-      await signOut()
-      setUser(null)
-      setProfile(null)
-      setTeamId(null)
-      setTeamCode(null)
-      setTeamOwnerId(null)
-      setTasks([])
-      setCarriedTasks([])
-      setTeamMembers([])
-      setTopics([])
-      appSnapshotCache = null
-      router.push("/")
+      await signOut();
+      setUser(null);
+      setProfile(null);
+      setTeamId(null);
+      setTeamCode(null);
+      setTeamOwnerId(null);
+      setTasks([]);
+      setCarriedTasks([]);
+      setTeamMembers([]);
+      setTopics([]);
+      appSnapshotCache = null;
+      router.push("/");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Could not sign out"
-      showNotification(message)
+      const message = err instanceof Error ? err.message : "Could not sign out";
+      showNotification(message);
     }
-  }, [router, showNotification])
+  }, [router, showNotification]);
 
   const handleNavigate = useCallback(
     (page: Page) => {
-      router.push(pagePaths[page])
+      router.push(pagePaths[page]);
     },
-    [router]
-  )
+    [router],
+  );
 
   useEffect(() => {
-    let isMounted = true
+    let isMounted = true;
 
     async function bootstrap() {
       try {
-        const current = await getCurrentUser()
-        if (isMounted) setUser(current)
+        const current = await getCurrentUser();
+        if (isMounted) setUser(current);
       } catch {
-        if (isMounted) setUser(null)
+        if (isMounted) setUser(null);
       } finally {
-        if (isMounted) setIsBooting(false)
+        if (isMounted) setIsBooting(false);
       }
     }
 
-    void bootstrap()
+    void bootstrap();
 
     const { data } = onAuthStateChange(async (_event, session) => {
-      if (!isMounted) return
-      setUser(session?.user ?? null)
-    })
+      if (!isMounted) return;
+      setUser(session?.user ?? null);
+    });
 
     return () => {
-      isMounted = false
-      data.subscription.unsubscribe()
-    }
-  }, [])
+      isMounted = false;
+      data.subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
-    if (!user) return
+    if (!user) return;
 
-    const cached = appSnapshotCache
+    const cached = appSnapshotCache;
     if (cached && cached.userId === user.id) {
-      applySnapshot(cached.snapshot)
-      setIsLoadingData(false)
-      void refreshAll({ silent: true })
-      return
+      applySnapshot(cached.snapshot);
+      setIsLoadingData(false);
+      void refreshAll({ silent: true });
+      return;
     }
 
-    void refreshAll()
-  }, [applySnapshot, refreshAll, user])
+    void refreshAll();
+  }, [applySnapshot, refreshAll, user]);
 
   useEffect(() => {
-    if (!user) return
+    if (!user) return;
 
-    if (typeof window === "undefined") return
+    if (typeof window === "undefined") return;
 
-    const noticeKey = `dailybrick-reminder-mode-notice:${user.id}`
-    if (window.sessionStorage.getItem(noticeKey) === "1") return
+    const noticeKey = `dailybrick-reminder-mode-notice:${user.id}`;
+    if (window.sessionStorage.getItem(noticeKey) === "1") return;
 
-    const provider = user.app_metadata?.provider
+    const provider = user.app_metadata?.provider;
     if (provider !== "google") {
-      showNotification("Email account detected: reminders will use in-app and browser notifications.")
+      showNotification(
+        "Email account detected: reminders will use in-app and browser notifications.",
+      );
     }
 
-    window.sessionStorage.setItem(noticeKey, "1")
-  }, [showNotification, user])
+    window.sessionStorage.setItem(noticeKey, "1");
+  }, [showNotification, user]);
 
   useEffect(() => {
-    if (!user) return
+    if (!user) return;
 
     const runReminderPoll = async () => {
       try {
-        const due = await getDueReminderTasks(user.id)
-        if (due.length === 0) return
+        const due = await getDueReminderTasks(user.id);
+        if (due.length === 0) return;
 
         if (
           typeof window !== "undefined" &&
@@ -328,46 +356,50 @@ export function AppShell() {
           Notification.permission === "default" &&
           !browserNotificationPermissionAskedRef.current
         ) {
-          browserNotificationPermissionAskedRef.current = true
-          void Notification.requestPermission()
+          browserNotificationPermissionAskedRef.current = true;
+          void Notification.requestPermission();
         }
 
         due.forEach((task) => {
-          const message = `Reminder: ${task.title} at ${task.time}`
-          showNotification(message)
+          const message = `Reminder: ${task.title} at ${task.time}`;
+          showNotification(message);
 
-          if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+          if (
+            typeof window !== "undefined" &&
+            "Notification" in window &&
+            Notification.permission === "granted"
+          ) {
             new Notification("DailyBrick reminder", {
               body: `${task.title} at ${task.time}`,
-            })
+            });
           }
-        })
-        await markDueRemindersAsSent(due.map((task) => task.id))
+        });
+        await markDueRemindersAsSent(due.map((task) => task.id));
       } catch {
         // Notification polling should stay best-effort.
       }
-    }
+    };
 
-    void runReminderPoll()
+    void runReminderPoll();
     const interval = window.setInterval(() => {
-      void runReminderPoll()
-    }, 30 * 1000)
+      void runReminderPoll();
+    }, 30 * 1000);
 
-    return () => window.clearInterval(interval)
-  }, [showNotification, user])
+    return () => window.clearInterval(interval);
+  }, [showNotification, user]);
 
   useEffect(() => {
     if (!isBooting && !user) {
-      router.replace("/auth")
+      router.replace("/auth");
     }
-  }, [isBooting, router, user])
+  }, [isBooting, router, user]);
 
   if (isBooting) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Spinner />
       </div>
-    )
+    );
   }
 
   if (!user) {
@@ -375,7 +407,7 @@ export function AppShell() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Spinner />
       </div>
-    )
+    );
   }
 
   return (
@@ -435,6 +467,8 @@ export function AppShell() {
                 {activePage === "journal" && (
                   <JournalPage
                     userId={user.id}
+                    teamId={teamId}
+                    teamMembers={teamMembers}
                     showNotification={showNotification}
                   />
                 )}
@@ -457,5 +491,5 @@ export function AppShell() {
 
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </div>
-  )
+  );
 }

@@ -58,12 +58,15 @@ create table if not exists public.topic_progress (
 create table if not exists public.journal_notes (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
+  team_id uuid references public.teams(id) on delete set null,
   title text not null,
   content_html text not null default '',
   font_style text not null default 'system' check (font_style in ('system', 'serif', 'mono', 'journal')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.journal_notes add column if not exists team_id uuid references public.teams(id) on delete set null;
 
 alter table public.tasks add column if not exists task_scope text not null default 'individual';
 alter table public.tasks add column if not exists shared_task_key uuid;
@@ -383,23 +386,43 @@ for update
 using (user_id = auth.uid())
 with check (user_id = auth.uid());
 
-create policy "journal_notes_select_own"
+drop policy if exists "journal_notes_select_own" on public.journal_notes;
+drop policy if exists "journal_notes_insert_own" on public.journal_notes;
+drop policy if exists "journal_notes_update_own" on public.journal_notes;
+drop policy if exists "journal_notes_delete_own" on public.journal_notes;
+
+create policy "journal_notes_select"
 on public.journal_notes
 for select
-using (user_id = auth.uid());
+using (
+  user_id = auth.uid()
+  or (team_id is not null and public.is_team_member(team_id))
+);
 
-create policy "journal_notes_insert_own"
+create policy "journal_notes_insert"
 on public.journal_notes
 for insert
-with check (user_id = auth.uid());
+with check (
+  user_id = auth.uid()
+  and (team_id is null or public.is_team_member(team_id))
+);
 
-create policy "journal_notes_update_own"
+create policy "journal_notes_update"
 on public.journal_notes
 for update
-using (user_id = auth.uid())
-with check (user_id = auth.uid());
+using (
+  user_id = auth.uid()
+  or (team_id is not null and public.is_team_member(team_id))
+)
+with check (
+  user_id = auth.uid()
+  or (team_id is not null and public.is_team_member(team_id))
+);
 
-create policy "journal_notes_delete_own"
+create policy "journal_notes_delete"
 on public.journal_notes
 for delete
-using (user_id = auth.uid());
+using (
+  user_id = auth.uid()
+  or (team_id is not null and public.is_team_member(team_id))
+);
