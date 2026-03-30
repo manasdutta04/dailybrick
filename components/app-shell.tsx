@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation"
 import type { User } from "@supabase/supabase-js"
 import { Sidebar, Topbar, BottomNav } from "@/components/layout"
 import { DashboardPage } from "@/components/dashboard-page"
+import { JournalPage } from "@/components/journal-page"
 import { TeamPage } from "@/components/team-page"
 import { ProgressPage } from "@/components/progress-page"
 import { SettingsPage } from "@/components/settings-page"
@@ -22,13 +23,14 @@ import {
 import type { DashboardQuickStats, Task, TeamMember, TopicProgress, UserProfile } from "@/lib/types"
 import type { AppSnapshot } from "@/lib/types"
 
-type Page = "dashboard" | "team" | "settings" | "progress"
+type Page = "dashboard" | "team" | "settings" | "progress" | "journal"
 
 const pageTitles: Record<Page, string> = {
   dashboard: "Dashboard",
   team: "Team",
   settings: "Settings",
   progress: "Progress",
+  journal: "Journal",
 }
 
 const pagePaths: Record<Page, string> = {
@@ -36,12 +38,14 @@ const pagePaths: Record<Page, string> = {
   team: "/team",
   settings: "/settings",
   progress: "/progress",
+  journal: "/journal",
 }
 
 function pathToPage(pathname: string): Page {
   if (pathname.startsWith("/team")) return "team"
   if (pathname.startsWith("/settings")) return "settings"
   if (pathname.startsWith("/progress")) return "progress"
+  if (pathname.startsWith("/journal")) return "journal"
   return "dashboard"
 }
 
@@ -126,10 +130,29 @@ function SettingsSkeleton() {
   )
 }
 
+function JournalSkeleton() {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-5">
+      <div className="rounded-2xl border border-border/80 bg-card p-4 space-y-3">
+        <Skeleton className="h-9 w-32" />
+        {Array.from({ length: 4 }).map((_, index) => (
+          <Skeleton key={`journal-skeleton-note-${index}`} className="h-24 w-full" />
+        ))}
+      </div>
+      <div className="rounded-2xl border border-border/80 bg-card p-4 space-y-3">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-8 w-full" />
+        <Skeleton className="h-80 w-full" />
+      </div>
+    </div>
+  )
+}
+
 function PageSkeleton({ page }: { page: Page }) {
   if (page === "team") return <TeamSkeleton />
   if (page === "progress") return <ProgressSkeleton />
   if (page === "settings") return <SettingsSkeleton />
+  if (page === "journal") return <JournalSkeleton />
   return <DashboardSkeleton />
 }
 
@@ -409,6 +432,12 @@ export function AppShell() {
                   />
                 )}
                 {activePage === "progress" && <ProgressPage topics={topics} />}
+                {activePage === "journal" && (
+                  <JournalPage
+                    userId={user.id}
+                    showNotification={showNotification}
+                  />
+                )}
                 {activePage === "settings" && (
                   <SettingsPage
                     userId={user.id}

@@ -1,6 +1,16 @@
 import type { User } from "@supabase/supabase-js"
 import { isSupabaseConfigured, supabase } from "@/lib/supabase"
-import type { AppSnapshot, Task, TaskScope, TaskStatus, TeamMember, TopicProgress, UserProfile } from "@/lib/types"
+import type {
+  AppSnapshot,
+  JournalFontStyle,
+  JournalNote,
+  Task,
+  TaskScope,
+  TaskStatus,
+  TeamMember,
+  TopicProgress,
+  UserProfile,
+} from "@/lib/types"
 
 interface DbTask {
   id: string
@@ -44,8 +54,19 @@ interface DbTopicProgress {
   completed_count: number
 }
 
+interface DbJournalNote {
+  id: string
+  user_id: string
+  title: string
+  content_html: string
+  font_style: JournalFontStyle
+  created_at: string
+  updated_at: string
+}
+
 const DB_TASK_SELECT =
   "id,user_id,task_scope,shared_task_key,calendar_event_id,title,topic,due_date,reminder_time,status,carried_forward,team_id"
+const DB_JOURNAL_SELECT = "id,user_id,title,content_html,font_style,created_at,updated_at"
 const GOOGLE_PROVIDER_TOKEN_STORAGE_KEY = "dailybrick_google_provider_token"
 
 const CODE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
@@ -140,6 +161,18 @@ function mapTask(task: DbTask): Task {
     time: time24To12Label(task.reminder_time),
     status: task.status,
     carriedForward: task.carried_forward,
+  }
+}
+
+function mapJournalNote(note: DbJournalNote): JournalNote {
+  return {
+    id: note.id,
+    userId: note.user_id,
+    title: note.title,
+    contentHtml: note.content_html,
+    fontStyle: note.font_style,
+    createdAt: note.created_at,
+    updatedAt: note.updated_at,
   }
 }
 
@@ -1146,4 +1179,75 @@ export async function getDueReminderTasks(userId: string): Promise<Task[]> {
   if (error) throw error
 
   return (data ?? []).map(mapTask)
+}
+
+export async function getJournalNotes(userId: string): Promise<JournalNote[]> {
+  assertSupabaseConfigured()
+
+  const { data, error } = await supabase
+    .from("journal_notes")
+    .select(DB_JOURNAL_SELECT)
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false })
+    .returns<DbJournalNote[]>()
+
+  if (error) throw error
+  return (data ?? []).map(mapJournalNote)
+}
+
+export async function createJournalNote(params: {
+  userId: string
+  title: string
+  contentHtml?: string
+  fontStyle?: JournalFontStyle
+}): Promise<JournalNote> {
+  assertSupabaseConfigured()
+  const title = params.title.trim()
+  if (!title) throw new Error("Title is required")
+
+  const { data, error } = await supabase
+    .from("journal_notes")
+    .insert({
+      user_id: params.userId,
+      title,
+      content_html: params.contentHtml ?? "",
+      font_style: params.fontStyle ?? "system",
+    })
+    .select(DB_JOURNAL_SELECT)
+    .single<DbJournalNote>()
+
+  if (error) throw error
+  return mapJournalNote(data)
+}
+
+export async function updateJournalNote(params: {
+  noteId: string
+  title: string
+  contentHtml: string
+  fontStyle: JournalFontStyle
+}): Promise<JournalNote> {
+  assertSupabaseConfigured()
+  const title = params.title.trim()
+  if (!title) throw new Error("Title is required")
+
+  const { data, error } = await supabase
+    .from("journal_notes")
+    .update({
+      title,
+      content_html: params.contentHtml,
+      font_style: params.fontStyle,
+    })
+    .eq("id", params.noteId)
+    .select(DB_JOURNAL_SELECT)
+    .single<DbJournalNote>()
+
+  if (error) throw error
+  return mapJournalNote(data)
+}
+
+export async function deleteJournalNote(noteId: string) {
+  assertSupabaseConfigured()
+
+  const { error } = await supabase.from("journal_notes").delete().eq("id", noteId)
+  if (error) throw error
 }

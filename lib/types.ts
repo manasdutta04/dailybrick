@@ -1,5 +1,6 @@
 export type TaskStatus = "pending" | "completed"
 export type TaskScope = "individual" | "team"
+export type JournalFontStyle = "system" | "serif" | "mono" | "journal"
 
 export interface Task {
   id: string
@@ -56,4 +57,14 @@ export interface AppSnapshot {
   teamMembers: TeamMember[]
   topics: TopicProgress[]
   quickStats: DashboardQuickStats
+}
+
+export interface JournalNote {
+  id: string
+  userId: string
+  title: string
+  contentHtml: string
+  fontStyle: JournalFontStyle
+  createdAt: string
+  updatedAt: string
 }

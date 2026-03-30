@@ -1,12 +1,12 @@
 "use client"
 
-import { Box, LayoutDashboard, Users, Settings, ChevronDown, Bell, LogOut, Sun, Moon, Monitor, BarChart2 } from "lucide-react"
+import { Box, LayoutDashboard, Users, Settings, ChevronDown, Bell, LogOut, Sun, Moon, Monitor, BarChart2, BookText } from "lucide-react"
 import { useState, useRef, useEffect } from "react"
 import { useTheme } from "next-themes"
 import { cn } from "@/lib/utils"
 import type { ToastMessage } from "@/components/toast-notifications"
 
-type Page = "dashboard" | "team" | "settings" | "progress"
+type Page = "dashboard" | "team" | "settings" | "progress" | "journal"
 
 interface NavbarProps {
   activePage: Page
@@ -20,12 +20,14 @@ interface NavbarProps {
 const navItems: { id: Page; label: string; icon: React.ElementType }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "team", label: "Team", icon: Users },
+  { id: "journal", label: "Journal", icon: BookText },
   { id: "progress", label: "Progress", icon: BarChart2 },
 ]
 
 const bottomNavItems: { id: Page; label: string; icon: React.ElementType }[] = [
   { id: "dashboard", label: "Home", icon: LayoutDashboard },
   { id: "team", label: "Team", icon: Users },
+  { id: "journal", label: "Journal", icon: BookText },
   { id: "progress", label: "Progress", icon: BarChart2 },
   { id: "settings", label: "Settings", icon: Settings },
 ]
