@@ -1,7 +1,34 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Download, FileText, Plus, Trash2, Type, Bold, Italic, Underline, Strikethrough, List, ListOrdered, Quote } from "lucide-react"
+import {
+  Bold,
+  ClipboardPaste,
+  Copy,
+  Download,
+  FileText,
+  Italic,
+  List,
+  ListOrdered,
+  Plus,
+  Printer,
+  Quote,
+  Strikethrough,
+  Trash2,
+  Type,
+  Underline,
+} from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -20,6 +47,16 @@ const FONT_OPTIONS: { value: JournalFontStyle; label: string; family: string }[]
   { value: "mono", label: "Mono", family: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" },
   { value: "journal", label: "Journal", family: "Charter, Georgia, serif" },
 ]
+
+const TEXT_SIZE_OPTIONS = [
+  { value: "14px", label: "14" },
+  { value: "16px", label: "16" },
+  { value: "18px", label: "18" },
+  { value: "20px", label: "20" },
+]
+
+const ACCENT_HOVER_BUTTON =
+  "border-border/70 text-foreground hover:border-primary/45 hover:bg-primary/10 hover:text-primary"
 
 type SaveState = "idle" | "saving" | "saved" | "error" | "title-required"
 
@@ -46,9 +83,11 @@ export function JournalPage({ userId, showNotification }: JournalPageProps) {
   const [title, setTitle] = useState("")
   const [contentHtml, setContentHtml] = useState("")
   const [fontStyle, setFontStyle] = useState<JournalFontStyle>("system")
+  const [textSize, setTextSize] = useState<string>("16px")
   const [isLoading, setIsLoading] = useState(true)
   const [isCreating, setIsCreating] = useState(false)
   const [saveState, setSaveState] = useState<SaveState>("idle")
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
 
   const editorRef = useRef<HTMLDivElement>(null)
   const saveTimerRef = useRef<number | null>(null)
@@ -198,11 +237,14 @@ export function JournalPage({ userId, showNotification }: JournalPageProps) {
         return remaining
       })
       setSaveState("idle")
+      setIsDeleteDialogOpen(false)
     } catch (err) {
       const message = err instanceof Error ? err.message : "Could not delete note"
       showNotification(message)
     }
   }
+
+  const getCurrentEditorHtml = () => editorRef.current?.innerHTML ?? contentHtml
 
   const runFormatCommand = (command: string, value?: string) => {
     if (!editorRef.current) return
@@ -215,9 +257,7 @@ export function JournalPage({ userId, showNotification }: JournalPageProps) {
     if (!selectedNote) return
 
     const safeTitle = selectedNote.title.trim().replace(/[^a-zA-Z0-9-_ ]/g, "") || "journal-note"
-    const htmlDoc = `<!doctype html><html><head><meta charset=\"utf-8\"><title>${selectedNote.title}</title></head><body>${
-      editorRef.current?.innerHTML ?? selectedNote.contentHtml
-    }</body></html>`
+    const htmlDoc = `<!doctype html><html><head><meta charset="utf-8"><title>${selectedNote.title}</title></head><body>${getCurrentEditorHtml()}</body></html>`
 
     const blob = new Blob([htmlDoc], { type: "text/html;charset=utf-8" })
     const url = URL.createObjectURL(blob)
@@ -228,6 +268,68 @@ export function JournalPage({ userId, showNotification }: JournalPageProps) {
     link.click()
     link.remove()
     URL.revokeObjectURL(url)
+  }
+
+  const handleCopyCurrent = async () => {
+    if (!selectedNote) return
+    const text = extractPreview(getCurrentEditorHtml())
+    if (!text) {
+      showNotification("Nothing to copy yet")
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(text)
+      showNotification("Note copied")
+    } catch {
+      showNotification("Copy failed. Clipboard permission may be blocked.")
+    }
+  }
+
+  const handlePasteIntoEditor = async () => {
+    if (!editorRef.current) return
+
+    try {
+      const text = await navigator.clipboard.readText()
+      if (!text) return
+      editorRef.current.focus()
+      document.execCommand("insertText", false, text)
+      setContentHtml(editorRef.current.innerHTML)
+      showNotification("Text pasted")
+    } catch {
+      showNotification("Paste failed. Use Ctrl+V if browser blocks clipboard access.")
+    }
+  }
+
+  const handlePrintCurrent = () => {
+    if (!selectedNote) return
+
+    const printWindow = window.open("", "_blank", "noopener,noreferrer,width=900,height=700")
+    if (!printWindow) {
+      showNotification("Could not open print dialog window")
+      return
+    }
+
+    const printable = `<!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>${selectedNote.title}</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; margin: 40px; }
+            h1 { margin: 0 0 16px; font-size: 22px; }
+          </style>
+        </head>
+        <body>
+          <h1>${selectedNote.title}</h1>
+          ${getCurrentEditorHtml()}
+          <script>window.onload = function(){ window.print(); window.close(); }</script>
+        </body>
+      </html>`
+
+    printWindow.document.open()
+    printWindow.document.write(printable)
+    printWindow.document.close()
   }
 
   const saveStatusLabel =
@@ -261,10 +363,18 @@ export function JournalPage({ userId, showNotification }: JournalPageProps) {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-5">
-      <aside className="rounded-2xl border border-border bg-card/80 backdrop-blur-sm p-3 md:p-4 flex flex-col max-h-[calc(100vh-10rem)]">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-semibold text-foreground">Journal</p>
-          <Button size="sm" className="h-8 rounded-lg text-xs" onClick={() => void handleCreateNote()} disabled={isCreating}>
+      <aside className="rounded-3xl border border-border bg-card/80 backdrop-blur-sm p-3 md:p-4 flex flex-col max-h-[calc(100vh-10rem)] shadow-[0_20px_80px_-60px_rgba(0,0,0,0.55)]">
+        <div className="flex items-center justify-between mb-3 rounded-2xl border border-border/60 bg-gradient-to-r from-card via-secondary/35 to-card px-3 py-2">
+          <div>
+            <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Journal</p>
+            <p className="text-sm font-semibold text-foreground">{notes.length} note{notes.length === 1 ? "" : "s"}</p>
+          </div>
+          <Button
+            size="sm"
+            className="h-8 rounded-lg text-xs bg-primary text-primary-foreground hover:bg-primary/90"
+            onClick={() => void handleCreateNote()}
+            disabled={isCreating}
+          >
             <Plus className="w-3.5 h-3.5 mr-1" />
             New
           </Button>
@@ -275,7 +385,7 @@ export function JournalPage({ userId, showNotification }: JournalPageProps) {
             <button
               type="button"
               onClick={() => void handleCreateNote()}
-              className="w-full rounded-xl border border-dashed border-border px-4 py-8 text-center hover:border-primary/40 hover:bg-secondary/40 transition-colors"
+              className="w-full rounded-2xl border border-dashed border-border px-4 py-8 text-center hover:border-primary/40 hover:bg-secondary/40 transition-colors"
             >
               <FileText className="w-5 h-5 mx-auto text-muted-foreground mb-2" />
               <p className="text-sm text-foreground">Create your first note</p>
@@ -300,9 +410,7 @@ export function JournalPage({ userId, showNotification }: JournalPageProps) {
                 )}
               >
                 <p className="text-sm font-semibold text-foreground truncate">{note.title}</p>
-                <p className="text-xs text-muted-foreground line-clamp-2 mt-1 min-h-8">
-                  {preview || "No content yet"}
-                </p>
+                <p className="text-xs text-muted-foreground line-clamp-2 mt-1 min-h-8">{preview || "No content yet"}</p>
                 <p className="text-[11px] text-muted-foreground/80 mt-2">{formatUpdatedAt(note.updatedAt)}</p>
               </button>
             )
@@ -310,10 +418,10 @@ export function JournalPage({ userId, showNotification }: JournalPageProps) {
         </div>
       </aside>
 
-      <section className="rounded-2xl border border-border bg-card/80 backdrop-blur-sm p-3 md:p-4 flex flex-col min-h-[70vh]">
+      <section className="rounded-3xl border border-border bg-card/80 backdrop-blur-sm p-3 md:p-4 flex flex-col min-h-[70vh] shadow-[0_24px_90px_-60px_rgba(0,0,0,0.55)]">
         {selectedNote ? (
           <>
-            <div className="flex flex-col gap-3 border-b border-border pb-3">
+            <div className="flex flex-col gap-3 border-b border-border pb-3 sticky top-0 bg-card/95 backdrop-blur-md z-[2] rounded-2xl">
               <div className="flex flex-wrap items-center gap-2 justify-between">
                 <Input
                   value={title}
@@ -323,7 +431,7 @@ export function JournalPage({ userId, showNotification }: JournalPageProps) {
                   required
                 />
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <select
                     value={fontStyle}
                     onChange={(e) => setFontStyle(e.target.value as JournalFontStyle)}
@@ -337,44 +445,90 @@ export function JournalPage({ userId, showNotification }: JournalPageProps) {
                     ))}
                   </select>
 
-                  <Button variant="outline" className="h-9 rounded-lg text-xs" onClick={handleDownloadCurrent}>
+                  <select
+                    value={textSize}
+                    onChange={(e) => setTextSize(e.target.value)}
+                    className="h-9 rounded-lg border border-border bg-background px-2.5 text-xs text-foreground"
+                    aria-label="Journal text size"
+                  >
+                    {TEXT_SIZE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+
+                  <Button variant="outline" className={cn("h-9 rounded-lg text-xs", ACCENT_HOVER_BUTTON)} onClick={handleCopyCurrent}>
+                    <Copy className="w-3.5 h-3.5 mr-1.5" />
+                    Copy
+                  </Button>
+
+                  <Button variant="outline" className={cn("h-9 rounded-lg text-xs", ACCENT_HOVER_BUTTON)} onClick={handlePasteIntoEditor}>
+                    <ClipboardPaste className="w-3.5 h-3.5 mr-1.5" />
+                    Paste
+                  </Button>
+
+                  <Button variant="outline" className={cn("h-9 rounded-lg text-xs", ACCENT_HOVER_BUTTON)} onClick={handlePrintCurrent}>
+                    <Printer className="w-3.5 h-3.5 mr-1.5" />
+                    Print
+                  </Button>
+
+                  <Button variant="outline" className={cn("h-9 rounded-lg text-xs", ACCENT_HOVER_BUTTON)} onClick={handleDownloadCurrent}>
                     <Download className="w-3.5 h-3.5 mr-1.5" />
                     Download
                   </Button>
-                  <Button
-                    variant="outline"
-                    className="h-9 rounded-lg text-xs text-destructive hover:text-destructive"
-                    onClick={() => void handleDeleteSelected()}
-                  >
-                    <Trash2 className="w-3.5 h-3.5 mr-1.5" />
-                    Delete
-                  </Button>
+
+                  <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" className="h-9 rounded-lg text-xs text-destructive hover:text-destructive">
+                        <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                        Delete
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="rounded-2xl">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete this note?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. The note will be removed from both local view and cloud sync.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          onClick={() => void handleDeleteSelected()}
+                        >
+                          Delete Note
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-1.5">
-                <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => runFormatCommand("bold")}> 
+                <Button variant="outline" size="sm" className={cn("h-8 px-2", ACCENT_HOVER_BUTTON)} onClick={() => runFormatCommand("bold")}>
                   <Bold className="w-3.5 h-3.5" />
                 </Button>
-                <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => runFormatCommand("italic")}> 
+                <Button variant="outline" size="sm" className={cn("h-8 px-2", ACCENT_HOVER_BUTTON)} onClick={() => runFormatCommand("italic")}>
                   <Italic className="w-3.5 h-3.5" />
                 </Button>
-                <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => runFormatCommand("underline")}> 
+                <Button variant="outline" size="sm" className={cn("h-8 px-2", ACCENT_HOVER_BUTTON)} onClick={() => runFormatCommand("underline")}>
                   <Underline className="w-3.5 h-3.5" />
                 </Button>
-                <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => runFormatCommand("strikeThrough")}> 
+                <Button variant="outline" size="sm" className={cn("h-8 px-2", ACCENT_HOVER_BUTTON)} onClick={() => runFormatCommand("strikeThrough")}>
                   <Strikethrough className="w-3.5 h-3.5" />
                 </Button>
-                <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => runFormatCommand("insertUnorderedList")}> 
+                <Button variant="outline" size="sm" className={cn("h-8 px-2", ACCENT_HOVER_BUTTON)} onClick={() => runFormatCommand("insertUnorderedList")}>
                   <List className="w-3.5 h-3.5" />
                 </Button>
-                <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => runFormatCommand("insertOrderedList")}> 
+                <Button variant="outline" size="sm" className={cn("h-8 px-2", ACCENT_HOVER_BUTTON)} onClick={() => runFormatCommand("insertOrderedList")}>
                   <ListOrdered className="w-3.5 h-3.5" />
                 </Button>
-                <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => runFormatCommand("formatBlock", "<blockquote>")}> 
+                <Button variant="outline" size="sm" className={cn("h-8 px-2", ACCENT_HOVER_BUTTON)} onClick={() => runFormatCommand("formatBlock", "<blockquote>")}>
                   <Quote className="w-3.5 h-3.5" />
                 </Button>
-                <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => runFormatCommand("formatBlock", "<h2>")}> 
+                <Button variant="outline" size="sm" className={cn("h-8 px-2", ACCENT_HOVER_BUTTON)} onClick={() => runFormatCommand("formatBlock", "<h2>")}>
                   <Type className="w-3.5 h-3.5" />
                 </Button>
               </div>
@@ -386,11 +540,11 @@ export function JournalPage({ userId, showNotification }: JournalPageProps) {
                 contentEditable
                 suppressContentEditableWarning
                 data-placeholder="Start writing your thoughts..."
-                className="journal-editor min-h-[50vh] rounded-xl border border-border bg-background/50 p-4 outline-none overflow-y-auto"
+                className="journal-editor min-h-[50vh] rounded-2xl border border-border bg-background/50 p-4 outline-none overflow-y-auto"
                 onInput={(event) => {
                   setContentHtml((event.currentTarget as HTMLDivElement).innerHTML)
                 }}
-                style={{ fontFamily: currentFontFamily }}
+                style={{ fontFamily: currentFontFamily, fontSize: textSize }}
               />
             </div>
 
