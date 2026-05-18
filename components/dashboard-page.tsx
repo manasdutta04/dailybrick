@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { CalendarClock, CheckSquare, BarChart3, Users2 } from "lucide-react"
 import { OverviewCards } from "@/components/overview-cards"
 import { TasksSection } from "@/components/tasks-section"
@@ -81,14 +82,20 @@ export function DashboardPage({
   refreshAll,
   showNotification,
 }: DashboardPageProps) {
+  const [greeting, setGreeting] = useState(() => 
+    getTimeBasedGreeting(userName.split(" ")[0])
+  )
+
+  useEffect(() => {
+    setGreeting(getTimeBasedGreeting(userName.split(" ")[0]))
+  }, [userName])
+
   const stats = [
     { label: "Streak", value: quickStats.streak, icon: CalendarClock },
     { label: "Done this week", value: quickStats.doneThisWeek, icon: CheckSquare },
     { label: "Top topic", value: quickStats.topTopic, icon: BarChart3 },
     { label: "Team members", value: quickStats.teamMembers, icon: Users2 },
   ]
-  
-  const greeting = getTimeBasedGreeting(userName.split(" ")[0])
 
   return (
     <div className="flex flex-col gap-6">
