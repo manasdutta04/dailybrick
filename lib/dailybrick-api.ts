@@ -237,6 +237,7 @@ async function carryForwardPendingTasks(userId: string): Promise<void> {
     })
     .eq("user_id", userId)
     .eq("status", "pending")
+    .eq("recurring_daily", false)
     .lt("due_date", today)
 }
 
