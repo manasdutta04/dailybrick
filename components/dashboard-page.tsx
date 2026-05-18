@@ -18,6 +18,57 @@ interface DashboardPageProps {
   showNotification: (msg: string) => void
 }
 
+function getTimeBasedGreeting(name: string): string {
+  const hour = new Date().getHours()
+  
+  // Morning greetings (5-11)
+  if (hour >= 5 && hour < 12) {
+    const morningGreetings = [
+      `Good morning, ${name}`,
+      `Rise and shine, ${name}!`,
+      `Wake up ${name}, let's get it done!`,
+      `Morning, ${name} – time to shine!`,
+      `You're cooking, ${name}!`,
+      `Let's go, ${name}!`,
+      `Seize the day, ${name}!`,
+      `Ready to rock, ${name}?`,
+    ]
+    return morningGreetings[Math.floor(Math.random() * morningGreetings.length)]
+  }
+  
+  // Afternoon greetings (12-17)
+  if (hour >= 12 && hour < 18) {
+    const afternoonGreetings = [
+      `Afternoon vibes, ${name}!`,
+      `Crushing it, ${name}!`,
+      `Halfway there, ${name}!`,
+      `Good going, ${name}!`,
+      `Keep it up, ${name}!`,
+      `You're on fire, ${name}!`,
+      `Afternoon push, ${name}!`,
+      `Still got it, ${name}!`,
+    ]
+    return afternoonGreetings[Math.floor(Math.random() * afternoonGreetings.length)]
+  }
+  
+  // Evening greetings (18-4)
+  const eveningGreetings = [
+    `Evening, ${name}!`,
+    `What's up, ${name}?`,
+    `Night owl mode, ${name}?`,
+    `Still going, ${name}!`,
+    `Crazy, ${name} – in a good way!`,
+    `You're unstoppable, ${name}!`,
+    `No sleep, ${name}!`,
+    `Legend, ${name}!`,
+    `Keep grinding, ${name}!`,
+    `Respect, ${name}!`,
+    `Amazing, ${name}!`,
+    `Legendary, ${name}!`,
+  ]
+  return eveningGreetings[Math.floor(Math.random() * eveningGreetings.length)]
+}
+
 export function DashboardPage({
   userName,
   tasks,
@@ -36,13 +87,15 @@ export function DashboardPage({
     { label: "Top topic", value: quickStats.topTopic, icon: BarChart3 },
     { label: "Team members", value: quickStats.teamMembers, icon: Users2 },
   ]
+  
+  const greeting = getTimeBasedGreeting(userName.split(" ")[0])
 
   return (
     <div className="flex flex-col gap-6">
       {/* Date greeting */}
       <div>
         <h2 className="text-lg font-semibold text-foreground text-balance">
-          Good morning, {userName.split(" ")[0]}
+          {greeting}
         </h2>
         <p className="text-sm text-muted-foreground mt-1">
           {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
