@@ -329,6 +329,23 @@ async function getTodayTasksForUsers(userIds: string[]): Promise<DbTask[]> {
   return data ?? []
 }
 
+async function getAllIncompleteTasksForUsers(userIds: string[]): Promise<DbTask[]> {
+  if (userIds.length === 0) return []
+
+  const { data, error } = await supabase
+    .from("tasks")
+    .select(DB_TASK_SELECT)
+    .in("user_id", userIds)
+    .eq("status", "pending")
+    .order("due_date", { ascending: false })
+    .order("reminder_time", { ascending: true })
+    .returns<DbTask[]>()
+
+  if (error) throw error
+
+  return data ?? []
+}
+
 async function getUserTopicProgress(userId: string): Promise<TopicProgress[]> {
   const { data, error } = await supabase
     .from("topic_progress")
@@ -567,11 +584,21 @@ export async function loadAppSnapshot(user: User): Promise<AppSnapshot> {
   const tasks = myTasksRaw.filter((task) => !task.carried_forward).map(mapTask)
   const carriedTasks = myTasksRaw.filter((task) => task.carried_forward).map(mapTask)
 
+  // Fetch all incomplete tasks for team members (including backlog)
+  const allIncompleteTasks = memberUserIds.length > 0 ? await getAllIncompleteTasksForUsers(memberUserIds) : []
+  const incompleteTasksByUser = new Map<string, DbTask[]>()
+  for (const task of allIncompleteTasks) {
+    const existing = incompleteTasksByUser.get(task.user_id) ?? []
+    existing.push(task)
+    incompleteTasksByUser.set(task.user_id, existing)
+  }
+
   const teamMembers: TeamMember[] = members.map((member) => {
     const p = member.user_id ? profilesById.get(member.user_id) : null
     const name = p?.full_name ?? member.invited_email.split("@")[0] ?? "Member"
     const email = p?.email ?? member.invited_email
-    const memberTasks = (member.user_id ? tasksByUser.get(member.user_id) : []) ?? []
+    // Use incomplete tasks for team members display (includes backlog)
+    const memberTasks = (member.user_id ? incompleteTasksByUser.get(member.user_id) : []) ?? []
     const completed = memberTasks.filter((task) => task.status === "completed").length
     const total = memberTasks.length
     const completionPercent = total > 0 ? Math.round((completed / total) * 100) : 0

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Copy, Check, UserPlus, Users, Mail, Lock, LogOut, Trash2, Link, Video } from "lucide-react"
+import { Copy, Check, UserPlus, Users, Mail, Lock, LogOut, Trash2, Link, Video, Calendar } from "lucide-react"
 import { createTeam, deleteTeam, inviteTeamMember, joinTeamByCode, leaveTeam } from "@/lib/dailybrick-api"
 import type { Task, TeamMember } from "@/lib/types"
 import type { User } from "@supabase/supabase-js"
@@ -10,9 +10,40 @@ import { Input } from "@/components/ui/input"
 import { cn, getErrorMessage } from "@/lib/utils"
 import { TeamRoom } from "@/components/TeamRoom"
 
+function getTodayDateString(): string {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = `${now.getMonth() + 1}`.padStart(2, "0")
+  const day = `${now.getDate()}`.padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+function formatDateLabel(dateString: string): string {
+  const [year, month, day] = dateString.split("-")
+  const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+  const today = new Date()
+  const todayDateString = getTodayDateString()
+  
+  if (dateString === todayDateString) {
+    return "Today"
+  }
+  
+  // Show relative date (e.g., "2 days ago", "Yesterday")
+  const diffTime = today.getTime() - date.getTime()
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  
+  if (diffDays === 1) return "Yesterday"
+  if (diffDays < 7) return `${diffDays}d ago`
+  
+  // Show abbreviated month and day
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+}
+
 function TaskRowReadOnly({ task }: { task: Task }) {
+  const isBacklog = task.dueDate && task.dueDate !== getTodayDateString()
+  
   return (
-    <div className="flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-secondary/40 transition-colors">
+    <div className="flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-secondary/40 transition-colors group">
       <div
         className={cn(
           "w-4 h-4 rounded-md border-2 flex items-center justify-center shrink-0",
@@ -34,7 +65,14 @@ function TaskRowReadOnly({ task }: { task: Task }) {
           Team
         </span>
       )}
-      <span className="text-[10px] text-muted-foreground shrink-0">{task.time}</span>
+      {isBacklog ? (
+        <span className="text-[10px] text-muted-foreground/60 flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Calendar className="w-3 h-3" />
+          {formatDateLabel(task.dueDate!)}
+        </span>
+      ) : (
+        <span className="text-[10px] text-muted-foreground shrink-0">{task.time}</span>
+      )}
       <Lock className="w-3 h-3 text-muted-foreground/40 shrink-0" aria-label="View only" />
     </div>
   )
@@ -380,13 +418,17 @@ export function TeamPage({ user, userName, teamId, teamCode, teamOwnerId, teamMe
               {expandedMember === member.id && (
                 <div className="px-5 pb-4 bg-secondary/20">
                   <p className="text-xs font-medium text-muted-foreground mb-2 pt-2">
-                    {member.isYou ? "Your tasks" : `${member.name.split(" ")[0]}'s tasks (view only)`}
+                    {member.isYou ? "All incomplete tasks" : `${member.name.split(" ")[0]}'s incomplete tasks (view only)`}
                   </p>
-                  <div className="flex flex-col gap-0.5">
-                    {member.tasks.map((task) => (
-                      <TaskRowReadOnly key={task.id} task={task} />
-                    ))}
-                  </div>
+                  {member.tasks.length === 0 ? (
+                    <p className="text-xs text-muted-foreground/60 py-2">No incomplete tasks</p>
+                  ) : (
+                    <div className="flex flex-col gap-0.5">
+                      {member.tasks.map((task) => (
+                        <TaskRowReadOnly key={task.id} task={task} />
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
