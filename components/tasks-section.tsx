@@ -28,28 +28,25 @@ interface TaskRowProps {
   task: Task
   onToggle: (id: string) => void
   onDelete: (id: string) => void
-  onEdit: (updates: { title: string; topic?: string; reminderTime?: string }) => Promise<void>
+  onEdit: (updates: { title: string; reminderTime?: string }) => Promise<void>
   disabled?: boolean
 }
 
 function TaskRow({ task, onToggle, onDelete, onEdit, disabled }: TaskRowProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editTitle, setEditTitle] = useState(task.title)
-  const [editTopic, setEditTopic] = useState(task.topic ?? "")
   const [editTime, setEditTime] = useState(task.reminderTime ?? "09:00")
 
   useEffect(() => {
     if (isEditing) return
     setEditTitle(task.title)
-    setEditTopic(task.topic ?? "")
     setEditTime(task.reminderTime ?? "09:00")
-  }, [isEditing, task.reminderTime, task.title, task.topic])
+  }, [isEditing, task.reminderTime, task.title])
 
   const handleSave = async () => {
     if (!editTitle.trim()) return
     await onEdit({
       title: editTitle.trim(),
-      topic: editTopic.trim() || undefined,
       reminderTime: editTime,
     })
     setIsEditing(false)
@@ -57,7 +54,6 @@ function TaskRow({ task, onToggle, onDelete, onEdit, disabled }: TaskRowProps) {
 
   const handleCancel = () => {
     setEditTitle(task.title)
-    setEditTopic(task.topic ?? "")
     setEditTime(task.reminderTime ?? "09:00")
     setIsEditing(false)
   }
@@ -74,13 +70,6 @@ function TaskRow({ task, onToggle, onDelete, onEdit, disabled }: TaskRowProps) {
             disabled={disabled}
           />
           <div className="flex flex-wrap items-center gap-2">
-            <Input
-              value={editTopic}
-              onChange={(e) => setEditTopic(e.target.value)}
-              placeholder="Topic"
-              className="h-8 w-[130px] bg-secondary border-border text-sm"
-              disabled={disabled}
-            />
             <div className="flex items-center gap-2 min-w-[118px]">
               <input
                 type="time"
@@ -316,14 +305,13 @@ export function TasksSection({
   const handleEditTask = async (
     task: Task,
     carried: boolean,
-    updates: { title: string; topic?: string; reminderTime?: string }
+    updates: { title: string; reminderTime?: string }
   ) => {
     try {
       setSaving(true)
       const updated = await updateTask({
         task,
         title: updates.title,
-        topic: updates.topic,
         reminderTime: updates.reminderTime,
       })
 

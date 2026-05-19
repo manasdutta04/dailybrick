@@ -635,16 +635,30 @@ export function onAuthStateChange(callback: Parameters<typeof supabase.auth.onAu
 
 async function cleanupPreviousMonthTasks(userId: string): Promise<void> {
   const today = new Date()
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+  const yesterdayStr = yesterday.toISOString().split("T")[0]
+  
+  // Delete completed tasks from yesterday or earlier (completed tasks should disappear the next morning)
+  await supabase
+    .from("tasks")
+    .delete()
+    .eq("user_id", userId)
+    .eq("status", "completed")
+    .lte("due_date", yesterdayStr)
+  
+  // On the 5th of each month, clean up topic_progress data from previous month
   if (today.getDate() >= 5) {
     const firstDayOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1)
-    const dateStr = firstDayOfCurrentMonth.toISOString().split("T")[0]
+    const cutoffDate = new Date(firstDayOfCurrentMonth)
+    cutoffDate.setMonth(cutoffDate.getMonth() - 1)
+    const cutoffDateStr = cutoffDate.toISOString()
     
     await supabase
-      .from("tasks")
+      .from("topic_progress")
       .delete()
       .eq("user_id", userId)
-      .eq("status", "completed")
-      .lt("due_date", dateStr)
+      .lt("created_at", cutoffDateStr)
   }
 }
 
@@ -971,7 +985,6 @@ export async function toggleTaskStatus(task: Pick<Task, "id" | "status" | "taskS
 export async function updateTask(params: {
   task: Pick<Task, "id" | "taskScope" | "sharedTaskKey">
   title: string
-  topic?: string
   reminderTime?: string
 }) {
   assertSupabaseConfigured()
@@ -981,8 +994,6 @@ export async function updateTask(params: {
     throw new Error("Task title is required")
   }
 
-  const normalizedTopic = params.topic?.trim() ?? ""
-  const nextTopic = normalizedTopic === "" ? null : normalizedTopic
   const nextReminderTime = params.reminderTime?.trim() || null
 
   const sourceRowsQuery = supabase
@@ -1002,7 +1013,6 @@ export async function updateTask(params: {
     .from("tasks")
     .update({
       title,
-      topic: nextTopic,
       reminder_time: nextReminderTime,
       reminder_sent_at: null,
     })
