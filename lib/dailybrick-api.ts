@@ -615,6 +615,31 @@ export async function clearAllUserTasks(userId: string) {
   if (error) throw error
 }
 
+export async function clearAllUserData(userId: string) {
+  assertSupabaseConfigured()
+  // Delete all tasks
+  const { error: tasksError } = await supabase.from("tasks").delete().eq("user_id", userId)
+  if (tasksError) throw tasksError
+  
+  // Delete all topic progress data
+  const { error: topicError } = await supabase.from("topic_progress").delete().eq("user_id", userId)
+  if (topicError) throw topicError
+}
+
+export async function clearAllTeamData(params: { userId: string; teamId: string | null }) {
+  assertSupabaseConfigured()
+  if (!params.teamId) {
+    await clearAllUserData(params.userId)
+    return
+  }
+
+  const { error } = await supabase.rpc("clear_team_data", {
+    p_team_id: params.teamId,
+  })
+
+  if (error) throw error
+}
+
 export async function getCurrentUser() {
   assertSupabaseConfigured()
   const { data, error } = await supabase.auth.getUser()

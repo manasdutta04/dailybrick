@@ -458,6 +458,8 @@ export function AppShell() {
                     userId={user.id}
                     userName={userDisplayName}
                     userEmail={userEmail}
+                    teamId={teamId}
+                    teamOwnerId={teamOwnerId}
                     refreshAll={refreshAll}
                     showNotification={showNotification}
                   />

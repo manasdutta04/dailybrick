@@ -159,6 +159,30 @@ as $$
   );
 $$;
 
+create or replace function public.clear_team_data(p_team_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_team_owner(p_team_id) then
+    raise exception 'Only the team owner can clear team data';
+  end if;
+
+  delete from public.tasks
+  where team_id = p_team_id;
+
+  delete from public.topic_progress
+  where user_id in (
+    select tm.user_id
+    from public.team_members tm
+    where tm.team_id = p_team_id
+      and tm.user_id is not null
+  );
+end;
+$$;
+
 alter table public.profiles enable row level security;
 alter table public.teams enable row level security;
 alter table public.team_members enable row level security;

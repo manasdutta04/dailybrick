@@ -5,17 +5,27 @@ import { Settings, Bell, Moon, Globe, LifeBuoy, MessageSquareWarning, Sparkles }
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import { clearAllUserTasks, updateProfileName } from "@/lib/dailybrick-api"
+import { clearAllTeamData, updateProfileName } from "@/lib/dailybrick-api"
 
 interface SettingsPageProps {
   userId: string
   userName: string
   userEmail: string
+  teamId: string | null
+  teamOwnerId: string | null
   refreshAll: () => Promise<void>
   showNotification: (message: string) => void
 }
 
-export function SettingsPage({ userId, userName, userEmail, refreshAll, showNotification }: SettingsPageProps) {
+export function SettingsPage({
+  userId,
+  userName,
+  userEmail,
+  teamId,
+  teamOwnerId,
+  refreshAll,
+  showNotification,
+}: SettingsPageProps) {
   const linkedInUrl = "https://www.linkedin.com/in/manasdutta04"
   const issuesUrl = "https://github.com/dyn0x/dailybrick/issues"
 
@@ -47,9 +57,9 @@ export function SettingsPage({ userId, userName, userEmail, refreshAll, showNoti
   const handleClearTasks = async () => {
     try {
       setIsClearingTasks(true)
-      await clearAllUserTasks(userId)
+      await clearAllTeamData({ userId, teamId })
       await refreshAll()
-      showNotification("All your tasks were cleared")
+      showNotification("All team data and progress were cleared")
     } catch (err) {
       const message = err instanceof Error ? err.message : "Could not clear tasks"
       showNotification(message)
@@ -166,16 +176,18 @@ export function SettingsPage({ userId, userName, userEmail, refreshAll, showNoti
             <p className="text-xs text-muted-foreground">
               These actions are irreversible. Please proceed with caution.
             </p>
-            <div className="flex flex-wrap gap-3">
-              <Button
-                onClick={() => void handleClearTasks()}
-                disabled={isClearingTasks}
-                variant="outline"
-                className="h-9 px-4 rounded-xl text-xs border-destructive/40 text-destructive hover:bg-destructive/10"
-              >
-                {isClearingTasks ? "Clearing..." : "Clear all tasks"}
-              </Button>
-            </div>
+            {teamId && teamOwnerId === userId && (
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  onClick={() => void handleClearTasks()}
+                  disabled={isClearingTasks}
+                  variant="outline"
+                  className="h-9 px-4 rounded-xl text-xs border-destructive/40 text-destructive hover:bg-destructive/10"
+                >
+                  {isClearingTasks ? "Clearing..." : "Clear all tasks"}
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 
