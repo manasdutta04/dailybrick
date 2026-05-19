@@ -241,6 +241,101 @@ async function carryForwardPendingTasks(userId: string): Promise<void> {
     .lt("due_date", today)
 }
 
+function getRecurringTaskSignature(task: DbTask): string {
+  if (task.task_scope === "team") {
+    return [
+      "team",
+      task.team_id ?? "",
+      task.title,
+      task.topic ?? "",
+      task.reminder_time ?? "",
+    ].join("|")
+  }
+
+  return [
+    "individual",
+    task.user_id,
+    task.team_id ?? "",
+    task.title,
+    task.topic ?? "",
+    task.reminder_time ?? "",
+  ].join("|")
+}
+
+async function seedRecurringDailyTasks(user: User, teamMemberIds: string[], teamId: string | null): Promise<void> {
+  const today = getTodayLocalDateString()
+
+  const individualRecurringQuery = supabase
+    .from("tasks")
+    .select(DB_TASK_SELECT)
+    .eq("user_id", user.id)
+    .eq("task_scope", "individual")
+    .eq("recurring_daily", true)
+    .lt("due_date", today)
+    .order("due_date", { ascending: false })
+
+  const teamRecurringQuery = teamId
+    ? supabase
+        .from("tasks")
+        .select(DB_TASK_SELECT)
+        .in("user_id", teamMemberIds)
+        .eq("team_id", teamId)
+        .eq("task_scope", "team")
+        .eq("recurring_daily", true)
+        .lt("due_date", today)
+        .order("due_date", { ascending: false })
+    : null
+
+  const [{ data: individualRows, error: individualError }, teamResult] = await Promise.all([
+    individualRecurringQuery.returns<DbTask[]>(),
+    teamRecurringQuery ? teamRecurringQuery.returns<DbTask[]>() : Promise.resolve({ data: [], error: null }),
+  ])
+
+  if (individualError) throw individualError
+  if (teamResult.error) throw teamResult.error
+
+  const pendingTodayRows = new Set<string>()
+  const { data: todayRows, error: todayRowsError } = await supabase
+    .from("tasks")
+    .select(DB_TASK_SELECT)
+    .eq("due_date", today)
+    .eq("recurring_daily", true)
+    .in("user_id", teamId ? [...new Set([...teamMemberIds, user.id])] : [user.id])
+    .returns<DbTask[]>()
+
+  if (todayRowsError) throw todayRowsError
+
+  for (const row of todayRows ?? []) {
+    pendingTodayRows.add(getRecurringTaskSignature(row))
+  }
+
+  const seeded = new Set<string>()
+
+  const seedFromRow = async (row: DbTask) => {
+    const signature = getRecurringTaskSignature(row)
+    if (seeded.has(signature) || pendingTodayRows.has(signature)) return
+    seeded.add(signature)
+
+    await createTask({
+      userId: user.id,
+      teamId: row.team_id,
+      taskScope: row.task_scope,
+      recurringDaily: true,
+      title: row.title,
+      topic: row.topic ?? undefined,
+      reminderTime: row.reminder_time ?? undefined,
+    })
+  }
+
+  for (const row of individualRows ?? []) {
+    await seedFromRow(row)
+  }
+
+  for (const row of teamResult.data ?? []) {
+    await seedFromRow(row)
+  }
+}
+
 
 
 async function adjustTopicProgress(params: {
@@ -568,7 +663,10 @@ export async function loadAppSnapshot(user: User): Promise<AppSnapshot> {
     getCompletionStreak(user.id),
   ])
 
-  const memberUserIds = members.map((member) => member.user_id).filter((id): id is string => Boolean(id))
+  const teamMemberIds = members.map((member) => member.user_id).filter((id): id is string => Boolean(id))
+  await seedRecurringDailyTasks(user, teamMemberIds, team?.id ?? null)
+
+  const memberUserIds = teamMemberIds
   const profilesById = await getProfiles(memberUserIds)
 
   const usersForTaskFetch = memberUserIds.length > 0 ? memberUserIds : [user.id]
